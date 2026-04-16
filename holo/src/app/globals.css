@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Syne:wght@400;500;600;700;800&display=swap');
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0c0f0d;
+  --surface: #131710;
+  --surface-2: #1a1f1b;
+  --border: #242b25;
+  --border-bright: #2e3830;
+  --text: #e8ede9;
+  --text-muted: #7a8c7c;
+  --text-dim: #4a5c4c;
+  --green: #52c77a;
+  --green-bright: #6ddf93;
+  --green-dim: rgba(82,199,122,0.12);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --red: #e05252;
+  --red-dim: rgba(224,82,82,0.12);
+  --blue: #52a8c7;
+
+  /* shadcn overrides */
+  --background: oklch(0.09 0.01 140);
+  --foreground: oklch(0.92 0.01 140);
+  --card: oklch(0.11 0.01 140);
+  --card-foreground: oklch(0.92 0.01 140);
+  --popover: oklch(0.11 0.01 140);
+  --popover-foreground: oklch(0.92 0.01 140);
+  --primary: oklch(0.68 0.15 145);
+  --primary-foreground: oklch(0.09 0.01 140);
+  --secondary: oklch(0.15 0.01 140);
+  --secondary-foreground: oklch(0.92 0.01 140);
+  --muted: oklch(0.15 0.01 140);
+  --muted-foreground: oklch(0.55 0.04 140);
+  --accent: oklch(0.18 0.01 140);
+  --accent-foreground: oklch(0.92 0.01 140);
+  --destructive: oklch(0.60 0.20 25);
+  --border: oklch(0.20 0.02 140);
+  --input: oklch(0.16 0.01 140);
+  --ring: oklch(0.68 0.15 145);
+  --radius: 0.25rem;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+}
+
+body {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  @apply bg-background text-foreground;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+/* Typography utilities */
+.font-syne { font-family: 'Syne', sans-serif !important; }
+.font-mono { font-family: 'DM Mono', monospace !important; }
+
+/* Status dots */
+.status-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.status-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+.status-dot.dim   { background: var(--text-dim); }
+
+/* Panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.panel-inner {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface-2); cursor: pointer; }
+
+/* Input overrides */
+input[type="text"], input[type="number"], textarea {
+  background: var(--surface-2) !important;
+  border-color: var(--border-bright) !important;
+  color: var(--text) !important;
+  font-family: 'DM Mono', monospace !important;
+}
+input:focus, textarea:focus {
+  border-color: var(--green) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(82, 199, 122, 0.15) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in            { animation: fadeIn 0.3s ease both; }
+.fade-in-delay-1    { animation-delay: 0.05s; }
+.fade-in-delay-2    { animation-delay: 0.10s; }
+.fade-in-delay-3    { animation-delay: 0.15s; }
+.fade-in-delay-4    { animation-delay: 0.20s; }
+.fade-in-delay-5    { animation-delay: 0.25s; }
+
+/* Number color utilities */
+.num-critical { color: var(--red); }
+.num-warn     { color: var(--amber); }
+.num-ok       { color: var(--green); }
+.num-dim      { color: var(--text-muted); }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

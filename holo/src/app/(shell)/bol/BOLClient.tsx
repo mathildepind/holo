@@ -51,14 +51,17 @@ function generateBOLPDF(bol: EnrichedBOL) {
       doc.setFont("helvetica", "normal");
       doc.setTextColor(30, 30, 30);
       doc.setFontSize(9);
-      doc.text(vals[i], cols[i], metaY + 5);
+      const maxW = i < cols.length - 1 ? cols[i + 1] - cols[i] - 4 : 200 - cols[i];
+      doc.text(vals[i], cols[i], metaY + 5, { maxWidth: maxW });
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
       doc.setTextColor(100, 100, 100);
     });
 
-    // Second row meta
-    const metaY2 = metaY + 14;
+    // Second row meta — account for address wrapping
+    const addressMaxW = 200 - cols[3];
+    const addressLines = doc.splitTextToSize(order.customer.address, addressMaxW);
+    const metaY2 = metaY + Math.max(14, 5 + addressLines.length * 4 + 4);
     const labels2 = ["PO NUMBER", "PLANNED SHIP", "PALLET COUNT", "TOTAL WEIGHT"];
     const vals2 = [
       order.poNumber,
@@ -128,7 +131,9 @@ function generateBOLPDF(bol: EnrichedBOL) {
         doc.setTextColor(30, 30, 30);
       } else {
         doc.setTextColor(82, 160, 100);
-        doc.text("✓", thCols[4], rowY + 5);
+        doc.setFont("helvetica", "bold");
+        doc.text("OK", thCols[4], rowY + 5);
+        doc.setFont("helvetica", "normal");
         doc.setTextColor(30, 30, 30);
       }
       rowY += 8;
@@ -378,7 +383,7 @@ export default function BOLClient({ bols }: { bols: EnrichedBOL[] }) {
   });
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1000 }} className="fade-in">
+    <div style={{ padding: "28px 32px", maxWidth: 1200 }} className="fade-in">
       {/* Header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>

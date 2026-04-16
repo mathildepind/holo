@@ -138,7 +138,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
   // ── Order list ──────────────────────────────────────────────────────────────
   if (!selectedOrder) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 720 }} className="fade-in">
+      <div style={{ padding: "28px 32px", maxWidth: 960 }} className="fade-in">
         <div style={{ marginBottom: 28 }}>
           <h1 className="font-syne" style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
             Pack Verification

@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const totalCommitted = inventory.reduce((s, i) => s + i.totalCommitted, 0);
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100 }} className="fade-in">
+    <div style={{ padding: "28px 32px", maxWidth: 1260 }} className="fade-in">
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1
@@ -129,7 +129,7 @@ export default function DashboardPage() {
       )}
 
       {/* Main grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 20, alignItems: "start" }}>
         {/* Inventory table */}
         <div className="panel fade-in-delay-2" style={{ overflow: "hidden" }}>
           <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>

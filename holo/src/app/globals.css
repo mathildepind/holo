@@ -40,7 +40,7 @@
   --accent: oklch(0.18 0.01 140);
   --accent-foreground: oklch(0.92 0.01 140);
   --destructive: oklch(0.60 0.20 25);
-  --border: oklch(0.20 0.02 140);
+  --border-shadcn: oklch(0.20 0.02 140);
   --input: oklch(0.16 0.01 140);
   --ring: oklch(0.68 0.15 145);
   --radius: 0.25rem;

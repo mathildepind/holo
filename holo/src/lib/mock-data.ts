@@ -12,10 +12,12 @@ export const customers: Customer[] = [
 
 export const products: Product[] = [
   { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, scanPrefix: "og-9024" },
-  { id: 2, sku: "BH-320", name: "Butterhead", packSize: "12 × 1 head", unitPrice: 24.0, scanPrefix: "og-7201" },
-  { id: 3, sku: "GL-410", name: "Green Leaf", packSize: "12 × 1 head", unitPrice: 22.5, scanPrefix: "og-7310" },
-  { id: 4, sku: "AR-100", name: "Arugula", packSize: "6 × 4 oz", unitPrice: 21.0, scanPrefix: "og-8841" },
-  { id: 5, sku: "KL-200", name: "Kale Mix", packSize: "6 × 5 oz", unitPrice: 19.75, scanPrefix: "og-9531" },
+  { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, scanPrefix: "og-7201" },
+  { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, scanPrefix: "og-7310" },
+  { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, scanPrefix: "og-8841" },
+  { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, scanPrefix: "og-9531" },
+  { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, scanPrefix: "og-8650" },
+  { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, scanPrefix: "og-9140" },
 ];
 
 export const salesOrders: SalesOrder[] = [
@@ -53,6 +55,8 @@ export const harvestLogs: HarvestLog[] = [
   { id: 3, productId: 3, harvestDate: "2025-04-15", quantityTrays: 40, source: "fresh" },
   { id: 4, productId: 4, harvestDate: "2025-04-15", quantityTrays: 15, source: "fresh" },
   { id: 5, productId: 5, harvestDate: "2025-04-15", quantityTrays: 20, source: "fresh" },
+  { id: 9, productId: 6, harvestDate: "2025-04-15", quantityTrays: 25, source: "fresh" },
+  { id: 10, productId: 7, harvestDate: "2025-04-15", quantityTrays: 18, source: "fresh" },
   // Cooler stock
   { id: 6, productId: 1, harvestDate: "2025-04-14", quantityTrays: 12, source: "cooler" },
   { id: 7, productId: 2, harvestDate: "2025-04-14", quantityTrays: 8, source: "cooler" },
@@ -72,7 +76,7 @@ export const shipments: Shipment[] = [
 export const packRecords: PackRecord[] = [
   {
     id: 1, orderId: 104, status: "locked", packedBy: "Maria R.",
-    notes: "Clean pack. Butterhead quality excellent.", verifiedAt: "2025-04-12T04:45:00Z",
+    notes: "Clean pack. Baby Romaine quality excellent.", verifiedAt: "2025-04-12T04:45:00Z",
   },
   {
     id: 2, orderId: 105, status: "locked", packedBy: "Maria R.",

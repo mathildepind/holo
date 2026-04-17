@@ -75,11 +75,11 @@ export const shipments: Shipment[] = [
 
 export const packRecords: PackRecord[] = [
   {
-    id: 1, orderId: 104, status: "locked", packedBy: "Maria R.",
+    id: 1, orderId: 104, status: "locked", packedBy: "L. Greens",
     notes: "Clean pack. Baby Romaine quality excellent.", verifiedAt: "2025-04-12T04:45:00Z",
   },
   {
-    id: 2, orderId: 105, status: "locked", packedBy: "Maria R.",
+    id: 2, orderId: 105, status: "locked", packedBy: "L. Greens",
     notes: "Short 6 cases of Green Leaf — quality pull on outer leaves. Customer notified.", verifiedAt: "2025-04-10T05:15:00Z",
   },
 ];

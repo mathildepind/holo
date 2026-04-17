@@ -94,7 +94,7 @@ export default function Sidebar() {
         }}
       >
         <div style={{ fontSize: 10, color: "var(--text-dim)", lineHeight: 1.6 }}>
-          <div>Operator: Maria R.</div>
+          <div>Operator: L. Greens</div>
           <div>Shift: 05:00 – 13:00</div>
         </div>
       </div>

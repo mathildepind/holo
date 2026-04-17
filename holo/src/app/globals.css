@@ -14,7 +14,7 @@
   --border-bright: #b5c0b7;
   --text: #1b2b1d;
   --text-muted: #506350;
-  --text-dim: #839684;
+  --text-dim: #657767;
   --green: #1a7d3f;
   --green-bright: #22964d;
   --green-dim: rgba(26,125,63,0.08);
@@ -22,7 +22,7 @@
   --amber-dim: rgba(138,93,0,0.08);
   --red: #b83232;
   --red-dim: rgba(184,50,50,0.08);
-  --blue: #2a7f9e;
+  --blue: #1a6a85;
 
   /* shadcn overrides */
   --background: oklch(0.96 0.01 145);

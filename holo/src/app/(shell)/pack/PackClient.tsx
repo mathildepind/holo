@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 import type { EnrichedOrder, Product } from "@/lib/types";
 import { Lock, AlertTriangle, CheckCircle, ChevronRight, ArrowLeft, FileText } from "lucide-react";
 
@@ -72,9 +73,14 @@ function OrderCard({
 
 type VerifyState = "editing" | "reviewing" | "locked";
 
-export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[] }) {
+export default function PackClient() {
   const router = useRouter();
+  const [openOrders, setOpenOrders] = useState<EnrichedOrder[] | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<EnrichedOrder | null>(null);
+
+  useEffect(() => {
+    apiFetch<EnrichedOrder[]>("/api/orders").then(setOpenOrders);
+  }, []);
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [packNotes, setPackNotes] = useState("");
   const [state, setState] = useState<VerifyState>("editing");
@@ -133,6 +139,18 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
   function handleBack() {
     setSelectedOrder(null);
     setState("editing");
+  }
+
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (!openOrders) {
+    return (
+      <div style={{ padding: "28px 32px", maxWidth: 960 }}>
+        <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+          Pack Verification
+        </div>
+        <p style={{ color: "var(--text-muted)", margin: "4px 0 0", fontSize: 12 }}>Loading…</p>
+      </div>
+    );
   }
 
   // ── Order list ──────────────────────────────────────────────────────────────

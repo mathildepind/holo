@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 import type { EnrichedBOL } from "@/lib/types";
 import {
   FileText, Download, ChevronRight, X, Truck, Thermometer,
@@ -368,9 +369,25 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
   );
 }
 
-export default function BOLClient({ bols }: { bols: EnrichedBOL[] }) {
+export default function BOLClient() {
+  const [bols, setBols] = useState<EnrichedBOL[] | null>(null);
   const [selected, setSelected] = useState<EnrichedBOL | null>(null);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    apiFetch<EnrichedBOL[]>("/api/bols").then(setBols);
+  }, []);
+
+  if (!bols) {
+    return (
+      <div style={{ padding: "28px 32px", maxWidth: 1200 }}>
+        <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+          BOL History
+        </div>
+        <p style={{ color: "var(--text-muted)", margin: "4px 0 0", fontSize: 12 }}>Loading…</p>
+      </div>
+    );
+  }
 
   const filtered = bols.filter((bol) => {
     const q = search.toLowerCase();

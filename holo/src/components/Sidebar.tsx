@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, PackageCheck, FileText } from "lucide-react";
@@ -10,8 +11,22 @@ const nav = [
   { href: "/bol",       icon: FileText,         label: "BOL History" },
 ];
 
+function useLiveClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  if (!now) return "";
+  return now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    + " · "
+    + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 export default function Sidebar() {
   const path = usePathname();
+  const clock = useLiveClock();
 
   return (
     <aside
@@ -51,7 +66,7 @@ export default function Sidebar() {
         }}
       >
         <span className="status-dot green" style={{ animation: "pulse-green 2s ease-in-out infinite" }} />
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Apr 15, 2025 · 05:02</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{clock}</span>
       </div>
 
       {/* Nav */}

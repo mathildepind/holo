@@ -239,7 +239,7 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: "pointer",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Outfit', sans-serif",
                 display: "flex",
                 alignItems: "center",
                 gap: 5,

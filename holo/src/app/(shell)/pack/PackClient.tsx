@@ -242,7 +242,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 color: "var(--text-muted)",
                 fontSize: 12,
                 cursor: "pointer",
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'Inter', sans-serif",
               }}
             >
               Back to Orders
@@ -258,7 +258,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Outfit', sans-serif",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -291,7 +291,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
             alignItems: "center",
             gap: 4,
             marginBottom: 12,
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "'Inter', sans-serif",
           }}
         >
           <ArrowLeft size={12} /> Back to orders
@@ -481,7 +481,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 color: "var(--text-muted)",
                 fontSize: 12,
                 cursor: "pointer",
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'Inter', sans-serif",
               }}
             >
               Cancel
@@ -498,7 +498,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: allFilled ? "pointer" : "not-allowed",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Outfit', sans-serif",
                 transition: "all 0.15s ease",
                 display: "flex",
                 alignItems: "center",
@@ -528,7 +528,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 color: "var(--text-muted)",
                 fontSize: 12,
                 cursor: "pointer",
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'Inter', sans-serif",
               }}
             >
               ← Edit Quantities
@@ -545,7 +545,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: discrepancyNotesMissing ? "not-allowed" : "pointer",
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Outfit', sans-serif",
                 transition: "all 0.15s ease",
                 display: "flex",
                 alignItems: "center",

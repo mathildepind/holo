@@ -122,6 +122,11 @@ body {
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--surface-2); cursor: pointer; }
 
+/* Hide number input spinners */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.no-spinner { -moz-appearance: textfield; }
+
 /* Input overrides */
 input[type="text"], input[type="number"], textarea {
   background: var(--surface) !important;

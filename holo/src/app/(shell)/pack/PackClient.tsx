@@ -381,6 +381,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                       <input
                         type="number"
                         min={0}
+                        className="no-spinner"
                         value={d.quantityPacked}
                         onChange={(e) => updateQty(d.productId, e.target.value)}
                         placeholder="0"
@@ -389,7 +390,7 @@ export default function PackClient({ openOrders }: { openOrders: EnrichedOrder[]
                           padding: "5px 8px",
                           borderRadius: 3,
                           border: `1px solid ${noteRequired ? "var(--red)" : "var(--border-bright)"}`,
-                          fontSize: 13,
+                          fontSize: 14,
                           textAlign: "right",
                         }}
                       />

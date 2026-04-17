@@ -97,12 +97,12 @@ export const billsOfLading: BillOfLading[] = [
   {
     id: 1, bolNumber: "BOL-2025-0041", packRecordId: 1, shipmentId: 1,
     palletCount: 4, totalWeight: 1240, tempRequirements: "34–38°F",
-    generatedBy: "Jordan K.", generatedAt: "2025-04-12T05:10:00Z",
+    generatedBy: "Roman E.", generatedAt: "2025-04-12T05:10:00Z",
   },
   {
     id: 2, bolNumber: "BOL-2025-0040", packRecordId: 2, shipmentId: 2,
     palletCount: 3, totalWeight: 980, tempRequirements: "34–38°F",
-    generatedBy: "Jordan K.", generatedAt: "2025-04-10T05:45:00Z",
+    generatedBy: "Roman E.", generatedAt: "2025-04-10T05:45:00Z",
   },
 ];
 

@@ -196,7 +196,7 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(12,15,13,0.85)",
+        background: "rgba(27,43,29,0.3)",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "flex-end",
@@ -235,7 +235,7 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
                 background: "var(--green)",
                 border: "none",
                 borderRadius: 3,
-                color: "#0c0f0d",
+                color: "var(--surface)",
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: "pointer",

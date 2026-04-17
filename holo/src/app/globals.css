@@ -7,42 +7,42 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0c0f0d;
-  --surface: #131710;
-  --surface-2: #1a1f1b;
-  --border: #242b25;
-  --border-bright: #2e3830;
-  --text: #e8ede9;
-  --text-muted: #7a8c7c;
-  --text-dim: #4a5c4c;
-  --green: #52c77a;
-  --green-bright: #6ddf93;
-  --green-dim: rgba(82,199,122,0.12);
-  --amber: #f5a623;
-  --amber-dim: rgba(245,166,35,0.12);
-  --red: #e05252;
-  --red-dim: rgba(224,82,82,0.12);
-  --blue: #52a8c7;
+  --bg: #f0f4f1;
+  --surface: #fafcfa;
+  --surface-2: #eef2ef;
+  --border: #cdd5ce;
+  --border-bright: #b5c0b7;
+  --text: #1b2b1d;
+  --text-muted: #506350;
+  --text-dim: #839684;
+  --green: #1a7d3f;
+  --green-bright: #22964d;
+  --green-dim: rgba(26,125,63,0.08);
+  --amber: #8a5d00;
+  --amber-dim: rgba(138,93,0,0.08);
+  --red: #b83232;
+  --red-dim: rgba(184,50,50,0.08);
+  --blue: #2a7f9e;
 
   /* shadcn overrides */
-  --background: oklch(0.09 0.01 140);
-  --foreground: oklch(0.92 0.01 140);
-  --card: oklch(0.11 0.01 140);
-  --card-foreground: oklch(0.92 0.01 140);
-  --popover: oklch(0.11 0.01 140);
-  --popover-foreground: oklch(0.92 0.01 140);
-  --primary: oklch(0.68 0.15 145);
-  --primary-foreground: oklch(0.09 0.01 140);
-  --secondary: oklch(0.15 0.01 140);
-  --secondary-foreground: oklch(0.92 0.01 140);
-  --muted: oklch(0.15 0.01 140);
-  --muted-foreground: oklch(0.55 0.04 140);
-  --accent: oklch(0.18 0.01 140);
-  --accent-foreground: oklch(0.92 0.01 140);
-  --destructive: oklch(0.60 0.20 25);
-  --border-shadcn: oklch(0.20 0.02 140);
-  --input: oklch(0.16 0.01 140);
-  --ring: oklch(0.68 0.15 145);
+  --background: oklch(0.96 0.01 145);
+  --foreground: oklch(0.18 0.03 145);
+  --card: oklch(0.99 0.005 145);
+  --card-foreground: oklch(0.18 0.03 145);
+  --popover: oklch(0.99 0.005 145);
+  --popover-foreground: oklch(0.18 0.03 145);
+  --primary: oklch(0.50 0.14 150);
+  --primary-foreground: oklch(0.99 0.005 145);
+  --secondary: oklch(0.94 0.01 145);
+  --secondary-foreground: oklch(0.18 0.03 145);
+  --muted: oklch(0.94 0.01 145);
+  --muted-foreground: oklch(0.42 0.04 145);
+  --accent: oklch(0.92 0.01 145);
+  --accent-foreground: oklch(0.18 0.03 145);
+  --destructive: oklch(0.50 0.18 25);
+  --border-shadcn: oklch(0.84 0.02 145);
+  --input: oklch(0.94 0.01 145);
+  --ring: oklch(0.50 0.14 150);
   --radius: 0.25rem;
 }
 
@@ -65,9 +65,9 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
 
 /* Typography utilities */
 .font-syne { font-family: 'Syne', sans-serif !important; }
@@ -80,9 +80,9 @@ body {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.status-dot.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-.status-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+.status-dot.green { background: var(--green); box-shadow: 0 0 4px rgba(26,125,63,0.4); }
+.status-dot.amber { background: var(--amber); box-shadow: 0 0 4px rgba(138,93,0,0.4); }
+.status-dot.red   { background: var(--red);   box-shadow: 0 0 4px rgba(184,50,50,0.4); }
 .status-dot.dim   { background: var(--text-dim); }
 
 /* Panels */
@@ -122,15 +122,15 @@ body {
 
 /* Input overrides */
 input[type="text"], input[type="number"], textarea {
-  background: var(--surface-2) !important;
-  border-color: var(--border-bright) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   color: var(--text) !important;
   font-family: 'DM Mono', monospace !important;
 }
 input:focus, textarea:focus {
   border-color: var(--green) !important;
   outline: none !important;
-  box-shadow: 0 0 0 2px rgba(82, 199, 122, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(26, 125, 63, 0.12) !important;
 }
 
 /* Animations */

@@ -6,8 +6,8 @@ import type {
 
 export const customers: Customer[] = [
   { id: 1, name: "Bay Leaf Markets", location: "Bay Leaf - Palo Alto", address: "340 University Ave, Palo Alto, CA 94301" },
-  { id: 2, name: "Green Table Co.", location: "Green Table - San Jose", address: "188 W Santa Clara St, San Jose, CA 95113" },
-  { id: 3, name: "Harvest & Vine", location: "Harvest & Vine - SF", address: "2301 Fillmore St, San Francisco, CA 94115" },
+  { id: 2, name: "Coastal Harvest Co-op", location: "Coastal Co-op - Menlo Park", address: "1100 El Camino Real, Menlo Park, CA 94025" },
+  { id: 3, name: "Golden Gate Provisions", location: "GG Provisions - South SF", address: "488 Grand Ave, South San Francisco, CA 94080" },
 ];
 
 export const products: Product[] = [
@@ -22,10 +22,10 @@ export const products: Product[] = [
 
 export const salesOrders: SalesOrder[] = [
   { id: 101, customerId: 1, poNumber: "BL-20250415", requestedDelivery: "2025-04-16", plannedShip: "2025-04-15", status: "entered", enteredAt: "2025-04-14T17:30:00Z" },
-  { id: 102, customerId: 2, poNumber: "GT-20250415", requestedDelivery: "2025-04-16", plannedShip: "2025-04-15", status: "entered", enteredAt: "2025-04-14T18:10:00Z" },
-  { id: 103, customerId: 3, poNumber: "HV-20250415", requestedDelivery: "2025-04-17", plannedShip: "2025-04-16", status: "entered", enteredAt: "2025-04-14T19:00:00Z" },
+  { id: 102, customerId: 2, poNumber: "CH-20250415", requestedDelivery: "2025-04-16", plannedShip: "2025-04-15", status: "entered", enteredAt: "2025-04-14T18:10:00Z" },
+  { id: 103, customerId: 3, poNumber: "GG-20250415", requestedDelivery: "2025-04-17", plannedShip: "2025-04-16", status: "entered", enteredAt: "2025-04-14T19:00:00Z" },
   { id: 104, customerId: 1, poNumber: "BL-20250412", requestedDelivery: "2025-04-13", plannedShip: "2025-04-12", status: "delivered", enteredAt: "2025-04-11T16:00:00Z" },
-  { id: 105, customerId: 2, poNumber: "GT-20250410", requestedDelivery: "2025-04-11", plannedShip: "2025-04-10", status: "delivered", enteredAt: "2025-04-09T14:00:00Z" },
+  { id: 105, customerId: 2, poNumber: "CH-20250410", requestedDelivery: "2025-04-11", plannedShip: "2025-04-10", status: "delivered", enteredAt: "2025-04-09T14:00:00Z" },
 ];
 
 export const orderItems: OrderItem[] = [
@@ -33,17 +33,17 @@ export const orderItems: OrderItem[] = [
   { id: 1001, orderId: 101, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
   { id: 1002, orderId: 101, productId: 2, quantityOrdered: 24, unitPrice: 24.0, discount: 0 },
   { id: 1003, orderId: 101, productId: 4, quantityOrdered: 12, unitPrice: 21.0, discount: 0 },
-  // Order 102 - Green Table
+  // Order 102 - Coastal Harvest Co-op
   { id: 1004, orderId: 102, productId: 1, quantityOrdered: 36, unitPrice: 18.5, discount: 5 },
   { id: 1005, orderId: 102, productId: 3, quantityOrdered: 24, unitPrice: 22.5, discount: 0 },
   { id: 1006, orderId: 102, productId: 5, quantityOrdered: 18, unitPrice: 19.75, discount: 0 },
-  // Order 103 - Harvest & Vine
+  // Order 103 - Golden Gate Provisions
   { id: 1007, orderId: 103, productId: 2, quantityOrdered: 50, unitPrice: 24.0, discount: 10 },
   { id: 1008, orderId: 103, productId: 1, quantityOrdered: 30, unitPrice: 18.5, discount: 0 },
   // Order 104 - Bay Leaf (delivered)
   { id: 1009, orderId: 104, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
   { id: 1010, orderId: 104, productId: 2, quantityOrdered: 24, unitPrice: 24.0, discount: 0 },
-  // Order 105 - Green Table (delivered)
+  // Order 105 - Coastal Harvest Co-op (delivered)
   { id: 1011, orderId: 105, productId: 3, quantityOrdered: 30, unitPrice: 22.5, discount: 0 },
   { id: 1012, orderId: 105, productId: 5, quantityOrdered: 24, unitPrice: 19.75, discount: 0 },
 ];

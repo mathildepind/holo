@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { getStoredBOLs } from "@/lib/store";
+import { resolveStatus, bolsByOrderId } from "@/lib/order-status";
 import type { EnrichedBOL, EnrichedOrder } from "@/lib/types";
 import {
   ClipboardList, Download, ChevronRight, X, Truck, Thermometer,
@@ -186,14 +187,6 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
       <span style={{ fontSize: 12, color: "var(--text)" }}>{value}</span>
     </div>
   );
-}
-
-type OrderStatus = { label: string; color: string };
-
-function resolveStatus(order: EnrichedOrder, bol: EnrichedBOL | undefined): OrderStatus {
-  if (bol) return { label: "Shipped", color: "var(--green)" };
-  if (order.status === "entered") return { label: "Open", color: "var(--amber)" };
-  return { label: order.status, color: "var(--text-muted)" };
 }
 
 function OrderDetail({
@@ -406,16 +399,7 @@ export default function OrdersClient() {
     });
   }, []);
 
-  // Map order.id → BOL (stored BOLs come first, so they win on duplicate keys)
-  const bolByOrderId = useMemo(() => {
-    const map = new Map<number, EnrichedBOL>();
-    (bols ?? []).forEach((b) => {
-      if (!map.has(b.packRecord.order.id)) {
-        map.set(b.packRecord.order.id, b);
-      }
-    });
-    return map;
-  }, [bols]);
+  const bolByOrderId = useMemo(() => bolsByOrderId(bols ?? []), [bols]);
 
   if (!orders || !bols) {
     return (

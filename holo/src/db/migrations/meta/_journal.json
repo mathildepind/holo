@@ -15,6 +15,13 @@
       "when": 1776548749347,
       "tag": "0001_sparkling_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776548857929,
+      "tag": "0002_uneven_jetstream",
+      "breakpoints": true
     }
   ]
 }

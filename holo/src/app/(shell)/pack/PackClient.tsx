@@ -148,7 +148,7 @@ export default function PackClient() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (!openOrders) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 960 }}>
+      <div className="page-container" style={{ maxWidth: 960 }}>
         <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
           Pack Verification
         </div>
@@ -160,7 +160,7 @@ export default function PackClient() {
   // ── Order list ──────────────────────────────────────────────────────────────
   if (!selectedOrder) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 960 }} className="fade-in">
+      <div className="page-container fade-in" style={{ maxWidth: 960 }}>
         <div style={{ marginBottom: 28 }}>
           <h1 className="font-syne" style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
             Pack Verification
@@ -189,7 +189,7 @@ export default function PackClient() {
   // ── Locked success screen ───────────────────────────────────────────────────
   if (state === "locked") {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 640 }} className="fade-in">
+      <div className="page-container fade-in" style={{ maxWidth: 640 }}>
         <div
           className="panel"
           style={{
@@ -208,7 +208,7 @@ export default function PackClient() {
           </div>
 
           <div className="panel" style={{ textAlign: "left", marginBottom: 20, padding: 0, overflow: "hidden" }}>
-            <table className="data-table">
+            <table className="data-table pack-items-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -227,10 +227,10 @@ export default function PackClient() {
                   const isDiscrepancy = typeof delta === "number" && delta !== 0;
                   return (
                     <tr key={d.productId}>
-                      <td>{d.product.name}</td>
-                      <td>{d.quantityOrdered}</td>
-                      <td style={{ fontWeight: 500 }}>{d.quantityPacked}</td>
-                      <td>
+                      <td data-label="Product">{d.product.name}</td>
+                      <td data-label="Ordered">{d.quantityOrdered}</td>
+                      <td data-label="Packed" style={{ fontWeight: 500 }}>{d.quantityPacked}</td>
+                      <td data-label="Δ">
                         {typeof delta === "number" ? (
                           <span
                             style={{
@@ -243,7 +243,7 @@ export default function PackClient() {
                           "—"
                         )}
                       </td>
-                      <td style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: 180 }}>
+                      <td data-label="Note" style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: 180 }}>
                         {d.discrepancyNote || "—"}
                       </td>
                     </tr>
@@ -297,7 +297,7 @@ export default function PackClient() {
 
   // ── Pack form ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 800 }} className="fade-in">
+    <div className="page-container fade-in" style={{ maxWidth: 800 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <button
@@ -371,7 +371,7 @@ export default function PackClient() {
             Line Items
           </span>
         </div>
-        <table className="data-table">
+        <table className="data-table pack-items-table">
           <thead>
             <tr>
               <th>Product</th>
@@ -394,11 +394,11 @@ export default function PackClient() {
 
               return (
                 <tr key={d.productId} style={isDiscrepancy ? { background: "rgba(245,166,35,0.04)" } : {}}>
-                  <td style={{ fontWeight: 500 }}>{d.product.name}</td>
-                  <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{d.product.sku}</td>
-                  <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{d.product.packSize}</td>
-                  <td>{d.quantityOrdered}</td>
-                  <td>
+                  <td data-label="Product" style={{ fontWeight: 500 }}>{d.product.name}</td>
+                  <td data-label="SKU" style={{ color: "var(--text-muted)", fontSize: 11 }}>{d.product.sku}</td>
+                  <td data-label="Pack Size" style={{ color: "var(--text-muted)", fontSize: 11 }}>{d.product.packSize}</td>
+                  <td data-label="Ordered">{d.quantityOrdered}</td>
+                  <td data-label="Packed">
                     {state === "editing" ? (
                       <input
                         type="number"
@@ -421,7 +421,7 @@ export default function PackClient() {
                     )}
                   </td>
                   {state === "reviewing" && (
-                    <td>
+                    <td data-label="Δ">
                       {delta !== null ? (
                         <span
                           style={{
@@ -435,7 +435,7 @@ export default function PackClient() {
                     </td>
                   )}
                   {state === "reviewing" && (
-                    <td>
+                    <td data-label="Discrepancy Note">
                       {isDiscrepancy ? (
                         <textarea
                           rows={2}
@@ -491,7 +491,7 @@ export default function PackClient() {
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      <div className="pack-actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {state === "editing" && (
           <>
             <button

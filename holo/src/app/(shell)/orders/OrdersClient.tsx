@@ -221,7 +221,7 @@ function OrderDetail({
     >
       <div
         style={{
-          width: 540,
+          width: "min(540px, 100vw)",
           height: "100%",
           background: "var(--surface)",
           borderLeft: "1px solid var(--border)",
@@ -403,7 +403,7 @@ export default function OrdersClient() {
 
   if (!orders || !bols) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 1200 }}>
+      <div className="page-container" style={{ maxWidth: 1200 }}>
         <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
           Order History
         </div>
@@ -430,7 +430,7 @@ export default function OrdersClient() {
   const openCount = orders.length - shippedCount;
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1200 }} className="fade-in">
+    <div className="page-container fade-in" style={{ maxWidth: 1200 }}>
       {/* Header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>

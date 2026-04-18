@@ -41,7 +41,7 @@ export default function DashboardClient() {
 
   if (!inventory || !openOrders) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: 1260 }}>
+      <div className="page-container" style={{ maxWidth: 1260 }}>
         <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
           Inventory &amp; Orders
         </div>
@@ -56,7 +56,7 @@ export default function DashboardClient() {
   const totalCommitted = inventory.reduce((s, i) => s + i.totalCommitted, 0);
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1260 }} className="fade-in">
+    <div className="page-container fade-in" style={{ maxWidth: 1260 }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1

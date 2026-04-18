@@ -24,12 +24,20 @@ function useLiveClock() {
     + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-export default function Sidebar() {
+export default function Sidebar({
+  open = false,
+  onItemClick,
+}: {
+  open?: boolean;
+  onItemClick?: () => void;
+}) {
   const path = usePathname();
   const clock = useLiveClock();
 
   return (
     <aside
+      className="app-sidebar"
+      data-open={open ? "true" : "false"}
       style={{
         width: 220,
         minWidth: 220,
@@ -42,6 +50,7 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div
+        className="sidebar-logo"
         style={{
           padding: "20px 20px 16px",
           borderBottom: "1px solid var(--border)",
@@ -50,13 +59,14 @@ export default function Sidebar() {
         <div className="font-syne" style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>
           HOLO
         </div>
-        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+        <div className="sidebar-subtitle" style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2, letterSpacing: "0.05em", textTransform: "uppercase" }}>
           Hippo Harvest
         </div>
       </div>
 
       {/* Date/time context */}
       <div
+        className="sidebar-clockbar"
         style={{
           padding: "10px 20px",
           borderBottom: "1px solid var(--border)",
@@ -77,6 +87,8 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onItemClick}
+              className="sidebar-link"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -93,7 +105,7 @@ export default function Sidebar() {
               }}
             >
               <Icon size={14} />
-              <span className="font-syne" style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.03em" }}>
+              <span className="font-syne sidebar-label" style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.03em" }}>
                 {label}
               </span>
             </Link>
@@ -103,6 +115,7 @@ export default function Sidebar() {
 
       {/* Bottom system info */}
       <div
+        className="sidebar-footer"
         style={{
           padding: "12px 20px",
           borderTop: "1px solid var(--border)",

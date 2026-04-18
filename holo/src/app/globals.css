@@ -161,3 +161,147 @@ input:focus, textarea:focus {
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }
+
+/* =============================================================
+   Responsive layout
+   ============================================================= */
+
+.page-container {
+  padding: 28px 32px;
+}
+@media (max-width: 1024px) {
+  .page-container { padding: 24px 20px; }
+}
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px; }
+}
+
+/* Mobile top bar — hidden at/above tablet */
+.mobile-topbar { display: none; }
+@media (max-width: 640px) {
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .mobile-topbar .brand {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+}
+
+.hamburger-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hamburger-btn:hover { color: var(--green); border-color: var(--green); }
+
+/* Sidebar — tablet icon-rail */
+@media (max-width: 1024px) and (min-width: 641px) {
+  .app-sidebar { width: 64px !important; min-width: 64px !important; }
+  .app-sidebar .sidebar-label,
+  .app-sidebar .sidebar-subtitle,
+  .app-sidebar .sidebar-clockbar,
+  .app-sidebar .sidebar-footer { display: none !important; }
+  .app-sidebar .sidebar-logo { padding: 16px 0 12px !important; text-align: center; }
+  .app-sidebar nav { padding: 10px 8px !important; }
+  .app-sidebar .sidebar-link { justify-content: center !important; padding: 10px 8px !important; }
+}
+
+/* Sidebar — mobile drawer */
+@media (max-width: 640px) {
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .app-sidebar[data-open="true"] {
+    transform: translateX(0);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.18);
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 55;
+  }
+  .sidebar-backdrop[data-open="true"] { display: block; }
+}
+
+/* Horizontally scroll wide tables at narrow widths */
+@media (max-width: 1024px) {
+  .panel-scroll { overflow-x: auto; }
+}
+
+/* Pack items table → stacked cards on mobile */
+@media (max-width: 640px) {
+  .pack-items-table thead { display: none; }
+  .pack-items-table,
+  .pack-items-table tbody,
+  .pack-items-table tr { display: block; width: 100%; }
+  .pack-items-table tr {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pack-items-table tr:last-child { border-bottom: none; }
+  .pack-items-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+    border: none;
+    font-size: 13px;
+  }
+  .pack-items-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .pack-items-table td[data-label="Product"] {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 4px;
+  }
+  .pack-items-table td[data-label="Product"]::before { display: none; }
+  .pack-items-table td[data-label="Discrepancy Note"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .pack-items-table td[data-label="Discrepancy Note"] textarea { width: 100%; }
+  .pack-items-table input[type="number"] { width: 90px !important; }
+}
+
+/* Pack action buttons wrap on narrow screens */
+@media (max-width: 640px) {
+  .pack-actions { flex-wrap: wrap; }
+  .pack-actions button { flex: 1 1 auto; justify-content: center; }
+}

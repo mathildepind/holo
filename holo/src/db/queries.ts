@@ -37,6 +37,27 @@ export function getEnrichedOrder(db: DB, id: number) {
     .sync();
 }
 
+export function getEnrichedBOLs(db: DB) {
+  return db.query.billsOfLading
+    .findMany({
+      with: {
+        packRecord: {
+          with: {
+            order: {
+              with: {
+                customer: true,
+                items: { with: { product: true } },
+              },
+            },
+            items: { with: { product: true } },
+          },
+        },
+        shipment: { with: { carrier: true } },
+      },
+    })
+    .sync();
+}
+
 export function getInventoryAvailability(db: DB) {
   const allProducts = db.select().from(products).all();
 

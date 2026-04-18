@@ -1,12 +1,24 @@
 import { describe, it, expect } from "vitest";
 import { createTestDb } from "./test-helpers";
-import { customers, products, salesOrders, orderItems, harvestLogs } from "./schema";
+import {
+  customers,
+  products,
+  salesOrders,
+  orderItems,
+  harvestLogs,
+  packRecords,
+  packItems,
+  carriers,
+  shipments,
+  billsOfLading,
+} from "./schema";
 import {
   getCustomerById,
   getProductById,
   getProductBySku,
   getEnrichedOrder,
   getInventoryAvailability,
+  getEnrichedBOLs,
 } from "./queries";
 
 describe("getCustomerById", () => {
@@ -274,5 +286,147 @@ describe("getInventoryAvailability", () => {
     // Spring Mix has 100 committed on a delivered order — must not count
     const springMix = getInventoryAvailability(db).find((r) => r.product.sku === "SM-645")!;
     expect(springMix.totalCommitted).toBe(48);
+  });
+});
+
+describe("getEnrichedBOLs", () => {
+  function seedFulfillment(db: ReturnType<typeof createTestDb>) {
+    db.insert(customers)
+      .values({ name: "Bay Leaf Markets", location: "Palo Alto", address: "—" })
+      .run();
+    db.insert(products)
+      .values([
+        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" },
+        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, scanPrefix: "og-7201" },
+      ])
+      .run();
+    db.insert(salesOrders)
+      .values({
+        customerId: 1,
+        poNumber: "BL-0412",
+        requestedDelivery: "2026-04-13",
+        plannedShip: "2026-04-12",
+        status: "delivered",
+        enteredAt: "2026-04-11T16:00:00Z",
+      })
+      .run();
+    db.insert(orderItems)
+      .values([
+        { orderId: 1, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
+        { orderId: 1, productId: 2, quantityOrdered: 24, unitPrice: 24, discount: 0 },
+      ])
+      .run();
+    db.insert(packRecords)
+      .values({
+        orderId: 1,
+        status: "locked",
+        packedBy: "L. Greens",
+        notes: "Clean pack.",
+        verifiedAt: "2026-04-12T04:45:00Z",
+      })
+      .run();
+    db.insert(packItems)
+      .values([
+        { packRecordId: 1, productId: 1, quantityPacked: 48, discrepancyNote: null },
+        {
+          packRecordId: 1,
+          productId: 2,
+          quantityPacked: 22,
+          discrepancyNote: "Short 2 — quality pull",
+        },
+      ])
+      .run();
+    db.insert(carriers).values({ name: "Hippo Truck", type: "internal" }).run();
+    db.insert(shipments)
+      .values({
+        carrierId: 1,
+        shipDate: "2026-04-12",
+        status: "delivered",
+        departedAt: "2026-04-12T06:00:00Z",
+        deliveredAt: "2026-04-13T09:30:00Z",
+      })
+      .run();
+    db.insert(billsOfLading)
+      .values({
+        bolNumber: "BOL-2026-0001",
+        packRecordId: 1,
+        shipmentId: 1,
+        palletCount: 4,
+        totalWeight: 1240,
+        tempRequirements: "34-38F",
+        generatedBy: "Roman E.",
+        generatedAt: "2026-04-12T05:10:00Z",
+      })
+      .run();
+  }
+
+  it("returns an empty array when no BOLs exist", () => {
+    const db = createTestDb();
+    expect(getEnrichedBOLs(db)).toEqual([]);
+  });
+
+  it("nests packRecord (with order + items) and shipment (with carrier)", () => {
+    const db = createTestDb();
+    seedFulfillment(db);
+
+    const bols = getEnrichedBOLs(db);
+
+    expect(bols).toHaveLength(1);
+    const bol = bols[0];
+
+    expect(bol).toMatchObject({
+      bolNumber: "BOL-2026-0001",
+      palletCount: 4,
+      totalWeight: 1240,
+      generatedBy: "Roman E.",
+    });
+
+    expect(bol.packRecord).toMatchObject({
+      status: "locked",
+      packedBy: "L. Greens",
+      order: {
+        poNumber: "BL-0412",
+        customer: { name: "Bay Leaf Markets" },
+      },
+    });
+    expect(bol.packRecord.order.items).toHaveLength(2);
+    expect(bol.packRecord.items).toHaveLength(2);
+    expect(bol.packRecord.items[0]).toMatchObject({
+      quantityPacked: 48,
+      discrepancyNote: null,
+      product: { sku: "SM-645" },
+    });
+    expect(bol.packRecord.items[1]).toMatchObject({
+      quantityPacked: 22,
+      discrepancyNote: "Short 2 — quality pull",
+      product: { sku: "BR-500" },
+    });
+
+    expect(bol.shipment).toMatchObject({
+      shipDate: "2026-04-12",
+      status: "delivered",
+      carrier: { name: "Hippo Truck", type: "internal" },
+    });
+  });
+
+  it("rejects a BOL with no parent pack record", () => {
+    const db = createTestDb();
+    seedFulfillment(db);
+
+    expect(() =>
+      db
+        .insert(billsOfLading)
+        .values({
+          bolNumber: "BOL-ORPHAN",
+          packRecordId: 999,
+          shipmentId: 1,
+          palletCount: 1,
+          totalWeight: 100,
+          tempRequirements: "—",
+          generatedBy: "—",
+          generatedAt: "2026-04-12T00:00:00Z",
+        })
+        .run()
+    ).toThrow();
   });
 });

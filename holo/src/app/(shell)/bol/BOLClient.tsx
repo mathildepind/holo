@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { getStoredBOLs } from "@/lib/store";
 import type { EnrichedBOL } from "@/lib/types";
 import {
   FileText, Download, ChevronRight, X, Truck, Thermometer,
@@ -375,7 +376,13 @@ export default function BOLClient() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    apiFetch<EnrichedBOL[]>("/api/bols").then(setBols);
+    apiFetch<EnrichedBOL[]>("/api/bols").then((mockBols) => {
+      const stored = getStoredBOLs();
+      const all = [...stored, ...mockBols].sort(
+        (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
+      );
+      setBols(all);
+    });
   }, []);
 
   if (!bols) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { createPackAndBOL } from "@/lib/store";
 import type { EnrichedOrder, Product } from "@/lib/types";
 import { Lock, AlertTriangle, CheckCircle, ChevronRight, ArrowLeft, FileText } from "lucide-react";
 
@@ -132,6 +133,9 @@ export default function PackClient() {
   }
 
   function handleLock() {
+    if (selectedOrder) {
+      createPackAndBOL(selectedOrder, draftItems, packNotes);
+    }
     setLockedAt(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
     setState("locked");
   }

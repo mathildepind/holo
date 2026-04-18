@@ -1,0 +1,24 @@
+import { describe, it, expect } from "vitest";
+import { GET } from "./route";
+
+const req = new Request("http://localhost/api/orders/101");
+
+describe("GET /api/orders/[id]", () => {
+  it("returns the enriched order for a known id", async () => {
+    const res = await GET(req, { params: { id: "101" } });
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.id).toBe(101);
+    expect(body.customer).toBeTruthy();
+    expect(Array.isArray(body.items)).toBe(true);
+  });
+
+  it("returns 404 for an unknown id", async () => {
+    const res = await GET(req, { params: { id: "99999" } });
+    expect(res.status).toBe(404);
+
+    const body = await res.json();
+    expect(body.error).toBe("Order not found");
+  });
+});

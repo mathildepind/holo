@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import { getStoredBOLs } from "@/lib/store";
-import type { EnrichedBOL } from "@/lib/types";
+import type { EnrichedBOL, EnrichedOrder } from "@/lib/types";
 import {
-  FileText, Download, ChevronRight, X, Truck, Thermometer,
-  Weight, Package, User, Calendar, Hash
+  ClipboardList, Download, ChevronRight, X, Truck, Thermometer,
+  Weight, Package, User, Calendar, Hash, FileText, MapPin,
 } from "lucide-react";
 
 // PDF generation
@@ -188,9 +188,28 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
   );
 }
 
-function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) {
-  const pr = bol.packRecord;
-  const order = pr.order;
+type OrderStatus = { label: string; color: string };
+
+function resolveStatus(order: EnrichedOrder, bol: EnrichedBOL | undefined): OrderStatus {
+  if (bol) return { label: "Shipped", color: "var(--green)" };
+  if (order.status === "entered") return { label: "Open", color: "var(--amber)" };
+  return { label: order.status, color: "var(--text-muted)" };
+}
+
+function OrderDetail({
+  order,
+  bol,
+  onClose,
+}: {
+  order: EnrichedOrder;
+  bol: EnrichedBOL | undefined;
+  onClose: () => void;
+}) {
+  const status = resolveStatus(order, bol);
+  const orderTotal = order.items.reduce(
+    (s, oi) => s + oi.quantityOrdered * oi.unitPrice * (1 - oi.discount / 100),
+    0
+  );
 
   return (
     <div
@@ -209,7 +228,7 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
     >
       <div
         style={{
-          width: 520,
+          width: 540,
           height: "100%",
           background: "var(--surface)",
           borderLeft: "1px solid var(--border)",
@@ -218,37 +237,32 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Slide-in keyframe injected inline */}
         <style>{`@keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
 
         {/* Header */}
         <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
-            <div className="font-syne" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{bol.bolNumber}</div>
+            <div className="font-syne" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{order.poNumber}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              {order.customer.name} · {order.poNumber}
+              {order.customer.name} · requested {order.requestedDelivery}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              onClick={() => generateBOLPDF(bol)}
+            <span
               style={{
-                padding: "7px 12px",
-                background: "var(--green)",
-                border: "none",
+                padding: "4px 10px",
                 borderRadius: 3,
-                color: "var(--surface)",
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "'Outfit', sans-serif",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: status.color,
+                border: `1px solid ${status.color}`,
+                background: "transparent",
               }}
             >
-              <Download size={12} /> Export PDF
-            </button>
+              {status.label}
+            </span>
             <button
               onClick={onClose}
               style={{
@@ -269,142 +283,167 @@ function BOLDetail({ bol, onClose }: { bol: EnrichedBOL; onClose: () => void }) 
 
         {/* Body */}
         <div style={{ padding: "20px 24px" }}>
-          {/* Shipment details */}
+          {/* Order details */}
           <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>
-            Shipment Details
+            Order Details
           </div>
-          <DetailRow icon={<Calendar size={12} />} label="Ship Date" value={bol.shipment.shipDate} />
-          <DetailRow icon={<Truck size={12} />} label="Carrier" value={`${bol.shipment.carrier.name} (${bol.shipment.carrier.type})`} />
-          <DetailRow icon={<Package size={12} />} label="Pallet Count" value={`${bol.palletCount} pallets`} />
-          <DetailRow icon={<Weight size={12} />} label="Total Weight" value={`${bol.totalWeight} lbs`} />
-          <DetailRow icon={<Thermometer size={12} />} label="Temp Requirements" value={bol.tempRequirements} />
-          <DetailRow icon={<User size={12} />} label="Generated By" value={bol.generatedBy} />
-          <DetailRow icon={<Hash size={12} />} label="Pack Record" value={`PR-${pr.id} · locked by ${pr.packedBy}`} />
+          <DetailRow icon={<Hash size={12} />} label="Order ID" value={`#${order.id}`} />
+          <DetailRow icon={<User size={12} />} label="Customer" value={order.customer.name} />
+          <DetailRow icon={<MapPin size={12} />} label="Delivery Address" value={order.customer.address} />
+          <DetailRow icon={<Calendar size={12} />} label="Requested Delivery" value={order.requestedDelivery} />
+          <DetailRow icon={<Calendar size={12} />} label="Planned Ship" value={order.plannedShip} />
+          <DetailRow icon={<Calendar size={12} />} label="Entered At" value={new Date(order.enteredAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} />
 
-          {/* Pack items */}
+          {/* Line items */}
           <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginTop: 24, marginBottom: 10 }}>
-            Line Items (Ordered vs. Packed)
+            Line Items
           </div>
           <div className="panel" style={{ overflow: "hidden" }}>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Product</th>
+                  <th>SKU</th>
                   <th>Ordered</th>
-                  <th>Packed</th>
-                  <th>Δ</th>
+                  <th>Unit Price</th>
                 </tr>
               </thead>
               <tbody>
-                {pr.items.map((item) => {
-                  const orderItem = order.items.find((oi) => oi.productId === item.productId);
-                  const delta = item.quantityPacked - (orderItem?.quantityOrdered ?? 0);
-                  const isDiscrep = delta !== 0;
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{item.product.name}</div>
-                        {item.discrepancyNote && (
-                          <div style={{ fontSize: 10, color: "var(--amber)", marginTop: 2 }}>
-                            {item.discrepancyNote}
-                          </div>
-                        )}
-                      </td>
-                      <td>{orderItem?.quantityOrdered ?? "—"}</td>
-                      <td style={{ fontWeight: 500 }}>{item.quantityPacked}</td>
-                      <td>
-                        <span style={{ color: isDiscrep ? "var(--amber)" : "var(--green)", fontWeight: 500 }}>
-                          {isDiscrep ? (delta > 0 ? `+${delta}` : delta) : "✓"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {order.items.map((oi) => (
+                  <tr key={oi.id}>
+                    <td style={{ fontWeight: 500 }}>{oi.product.name}</td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{oi.product.sku}</td>
+                    <td>{oi.quantityOrdered}</td>
+                    <td style={{ color: "var(--text-muted)" }}>${oi.unitPrice.toFixed(2)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {/* Pack notes */}
-          {pr.notes && (
-            <div style={{ marginTop: 16 }}>
-              <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 6 }}>
-                Pack Notes
+          {/* Order total */}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 2px 0", fontSize: 13, fontWeight: 600 }}>
+            <span style={{ color: "var(--text)" }}>Order Total</span>
+            <span style={{ color: "var(--green)" }}>
+              ${orderTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+
+          {/* BOL section */}
+          {bol ? (
+            <div style={{ marginTop: 28 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>
+                  Bill of Lading
+                </div>
+                <button
+                  onClick={() => generateBOLPDF(bol)}
+                  style={{
+                    padding: "6px 11px",
+                    background: "var(--green)",
+                    border: "none",
+                    borderRadius: 3,
+                    color: "var(--surface)",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "'Outfit', sans-serif",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <Download size={12} /> Download BOL
+                </button>
               </div>
-              <div className="panel-inner" style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
-                {pr.notes}
+              <DetailRow icon={<FileText size={12} />} label="BOL Number" value={bol.bolNumber} />
+              <DetailRow icon={<Truck size={12} />} label="Carrier" value={`${bol.shipment.carrier.name} (${bol.shipment.carrier.type})`} />
+              <DetailRow icon={<Calendar size={12} />} label="Ship Date" value={bol.shipment.shipDate} />
+              <DetailRow icon={<Package size={12} />} label="Pallet Count" value={`${bol.palletCount} pallets`} />
+              <DetailRow icon={<Weight size={12} />} label="Total Weight" value={`${bol.totalWeight} lbs`} />
+              <DetailRow icon={<Thermometer size={12} />} label="Temp Requirements" value={bol.tempRequirements} />
+              <DetailRow icon={<User size={12} />} label="Generated By" value={bol.generatedBy} />
+            </div>
+          ) : (
+            <div style={{ marginTop: 28 }}>
+              <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>
+                Bill of Lading
+              </div>
+              <div
+                className="panel-inner"
+                style={{
+                  padding: "14px 16px",
+                  fontSize: 12,
+                  color: "var(--text-muted)",
+                  lineHeight: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <FileText size={14} color="var(--text-dim)" />
+                Not yet packed — BOL will be generated after pack verification.
               </div>
             </div>
           )}
-
-          {/* Invoice info */}
-          <div style={{ marginTop: 24 }}>
-            <div className="font-syne" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>
-              Invoice Summary
-            </div>
-            <div className="panel-inner" style={{ padding: "12px 14px" }}>
-              {order.items.map((oi) => {
-                const pi = pr.items.find((p) => p.productId === oi.productId);
-                const packedQty = pi?.quantityPacked ?? 0;
-                const lineValue = packedQty * oi.unitPrice * (1 - oi.discount / 100);
-                return (
-                  <div key={oi.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--border)", fontSize: 11 }}>
-                    <span style={{ color: "var(--text-muted)" }}>{oi.product.name} × {packedQty} cs</span>
-                    <span style={{ color: "var(--text)", fontWeight: 500 }}>${lineValue.toFixed(2)}</span>
-                  </div>
-                );
-              })}
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 0", fontSize: 13, fontWeight: 600 }}>
-                <span style={{ color: "var(--text)" }}>Total</span>
-                <span style={{ color: "var(--green)" }}>
-                  ${order.items.reduce((s, oi) => {
-                    const pi = pr.items.find((p) => p.productId === oi.productId);
-                    return s + (pi?.quantityPacked ?? 0) * oi.unitPrice * (1 - oi.discount / 100);
-                  }, 0).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default function BOLClient() {
+export default function OrdersClient() {
+  const [orders, setOrders] = useState<EnrichedOrder[] | null>(null);
   const [bols, setBols] = useState<EnrichedBOL[] | null>(null);
-  const [selected, setSelected] = useState<EnrichedBOL | null>(null);
+  const [selected, setSelected] = useState<EnrichedOrder | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    apiFetch<EnrichedOrder[]>("/api/orders/history").then(setOrders);
     apiFetch<EnrichedBOL[]>("/api/bols").then((mockBols) => {
       const stored = getStoredBOLs();
-      const all = [...stored, ...mockBols].sort(
-        (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
-      );
-      setBols(all);
+      setBols([...stored, ...mockBols]);
     });
   }, []);
 
-  if (!bols) {
+  // Map order.id → BOL (stored BOLs come first, so they win on duplicate keys)
+  const bolByOrderId = useMemo(() => {
+    const map = new Map<number, EnrichedBOL>();
+    (bols ?? []).forEach((b) => {
+      if (!map.has(b.packRecord.order.id)) {
+        map.set(b.packRecord.order.id, b);
+      }
+    });
+    return map;
+  }, [bols]);
+
+  if (!orders || !bols) {
     return (
       <div style={{ padding: "28px 32px", maxWidth: 1200 }}>
         <div className="font-syne" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
-          BOL History
+          Order History
         </div>
         <p style={{ color: "var(--text-muted)", margin: "4px 0 0", fontSize: 12 }}>Loading…</p>
       </div>
     );
   }
 
-  const filtered = bols.filter((bol) => {
+  const sorted = [...orders].sort(
+    (a, b) => new Date(b.enteredAt).getTime() - new Date(a.enteredAt).getTime()
+  );
+
+  const filtered = sorted.filter((o) => {
     const q = search.toLowerCase();
+    const bol = bolByOrderId.get(o.id);
     return (
-      bol.bolNumber.toLowerCase().includes(q) ||
-      bol.packRecord.order.customer.name.toLowerCase().includes(q) ||
-      bol.packRecord.order.poNumber.toLowerCase().includes(q) ||
-      bol.shipment.carrier.name.toLowerCase().includes(q)
+      o.poNumber.toLowerCase().includes(q) ||
+      o.customer.name.toLowerCase().includes(q) ||
+      (bol?.bolNumber.toLowerCase().includes(q) ?? false)
     );
   });
+
+  const shippedCount = orders.filter((o) => bolByOrderId.has(o.id)).length;
+  const openCount = orders.length - shippedCount;
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1200 }} className="fade-in">
@@ -412,15 +451,15 @@ export default function BOLClient() {
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <h1 className="font-syne" style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-            BOL History
+            Order History
           </h1>
           <p style={{ color: "var(--text-muted)", margin: "4px 0 0", fontSize: 12 }}>
-            {bols.length} bills of lading · click any row to view details &amp; export PDF
+            {orders.length} orders · click any row to view details{shippedCount > 0 ? " & download BOL" : ""}
           </p>
         </div>
         <input
           type="text"
-          placeholder="Search BOLs, customers, POs…"
+          placeholder="Search orders, customers, BOLs…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -435,24 +474,9 @@ export default function BOLClient() {
       {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }} className="fade-in-delay-1">
         {[
-          { label: "Total Shipments", value: bols.length },
-          {
-            label: "Total Revenue",
-            value: `$${bols.reduce((s, bol) => {
-              const pr = bol.packRecord;
-              return s + pr.order.items.reduce((os, oi) => {
-                const pi = pr.items.find((p) => p.productId === oi.productId);
-                return os + (pi?.quantityPacked ?? 0) * oi.unitPrice * (1 - oi.discount / 100);
-              }, 0);
-            }, 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-          },
-          {
-            label: "Discrepancies",
-            value: bols.reduce(
-              (s, bol) => s + bol.packRecord.items.filter((i) => i.discrepancyNote).length,
-              0
-            ),
-          },
+          { label: "Total Orders", value: orders.length },
+          { label: "Open", value: openCount },
+          { label: "Shipped", value: shippedCount },
         ].map(({ label, value }) => (
           <div key={label} className="panel" style={{ padding: "14px 18px" }}>
             <div className="font-syne" style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 8 }}>
@@ -469,73 +493,85 @@ export default function BOLClient() {
       <div className="panel fade-in-delay-2" style={{ overflow: "hidden" }}>
         {filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>
-            No BOLs match your search.
+            No orders match your search.
           </div>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>BOL #</th>
-                <th>Date</th>
-                <th>Customer</th>
                 <th>PO Number</th>
-                <th>Carrier</th>
-                <th>Pallets</th>
-                <th>Weight</th>
+                <th>Customer</th>
+                <th>Requested</th>
+                <th>Items</th>
+                <th>Order Value</th>
                 <th>Status</th>
-                <th>Discrepancies</th>
+                <th>BOL</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((bol) => {
-                const hasDiscrepancy = bol.packRecord.items.some((i) => i.discrepancyNote);
-                const statusColor =
-                  bol.shipment.status === "delivered"
-                    ? "var(--green)"
-                    : bol.shipment.status === "in_transit"
-                    ? "var(--amber)"
-                    : "var(--text-muted)";
+              {filtered.map((order) => {
+                const bol = bolByOrderId.get(order.id);
+                const status = resolveStatus(order, bol);
+                const orderValue = order.items.reduce(
+                  (s, oi) => s + oi.quantityOrdered * oi.unitPrice * (1 - oi.discount / 100),
+                  0
+                );
 
                 return (
-                  <tr key={bol.id} onClick={() => setSelected(bol)} style={{ cursor: "pointer" }}>
+                  <tr key={order.id} onClick={() => setSelected(order)} style={{ cursor: "pointer" }}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <FileText size={11} color="var(--text-dim)" />
-                        <span style={{ fontWeight: 500 }}>{bol.bolNumber}</span>
+                        <ClipboardList size={11} color="var(--text-dim)" />
+                        <span style={{ fontWeight: 500 }}>{order.poNumber}</span>
                       </div>
                     </td>
-                    <td style={{ color: "var(--text-muted)" }}>
-                      {new Date(bol.generatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    <td>{order.customer.name}</td>
+                    <td style={{ color: "var(--text-muted)" }}>{order.requestedDelivery}</td>
+                    <td style={{ color: "var(--text-muted)" }}>{order.items.length}</td>
+                    <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                      ${orderValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </td>
-                    <td>{bol.packRecord.order.customer.name}</td>
-                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>
-                      {bol.packRecord.order.poNumber}
-                    </td>
-                    <td style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                      {bol.shipment.carrier.name}
-                    </td>
-                    <td>{bol.palletCount}</td>
-                    <td style={{ color: "var(--text-muted)" }}>{bol.totalWeight} lbs</td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <span
                           className="status-dot"
                           style={{
-                            background: statusColor,
-                            boxShadow: `0 0 5px ${statusColor}`,
+                            background: status.color,
+                            boxShadow: `0 0 5px ${status.color}`,
                           }}
                         />
-                        <span style={{ color: statusColor, fontSize: 11, textTransform: "capitalize" }}>
-                          {bol.shipment.status.replace("_", " ")}
+                        <span style={{ color: status.color, fontSize: 11, textTransform: "capitalize" }}>
+                          {status.label}
                         </span>
                       </div>
                     </td>
                     <td>
-                      {hasDiscrepancy ? (
-                        <span style={{ color: "var(--amber)", fontSize: 11 }}>⚠ Yes</span>
+                      {bol ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            generateBOLPDF(bol);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            cursor: "pointer",
+                            color: "var(--green)",
+                            fontSize: 11,
+                            fontWeight: 500,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontFamily: "inherit",
+                          }}
+                          title={`Download ${bol.bolNumber}`}
+                        >
+                          <Download size={11} /> {bol.bolNumber}
+                        </button>
                       ) : (
-                        <span style={{ color: "var(--green)", fontSize: 11 }}>✓ None</span>
+                        <span style={{ color: "var(--text-dim)", fontSize: 11 }}>—</span>
                       )}
                     </td>
                     <td>
@@ -550,7 +586,13 @@ export default function BOLClient() {
       </div>
 
       {/* Detail panel */}
-      {selected && <BOLDetail bol={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <OrderDetail
+          order={selected}
+          bol={bolByOrderId.get(selected.id)}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }

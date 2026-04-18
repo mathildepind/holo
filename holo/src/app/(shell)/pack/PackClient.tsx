@@ -270,7 +270,7 @@ export default function PackClient() {
               Back to Orders
             </button>
             <button
-              onClick={() => router.push("/bol")}
+              onClick={() => router.push("/orders")}
               style={{
                 padding: "8px 16px",
                 background: "var(--green)",

@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, PackageCheck, FileText } from "lucide-react";
+import { LayoutDashboard, PackageCheck, ClipboardList } from "lucide-react";
 
 const nav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/pack",      icon: PackageCheck,    label: "Pack Verify" },
-  { href: "/bol",       icon: FileText,         label: "BOL History" },
+  { href: "/orders",    icon: ClipboardList,   label: "Order History" },
 ];
 
 function useLiveClock() {

@@ -143,6 +143,10 @@ export function getOpenOrders(): EnrichedOrder[] {
     .map((o) => getEnrichedOrder(o.id)!);
 }
 
+export function getAllEnrichedOrders(): EnrichedOrder[] {
+  return salesOrders.map((o) => getEnrichedOrder(o.id)!);
+}
+
 export function getInventoryAvailability(): InventoryAvailability[] {
   const openOrders = getOpenOrders();
 

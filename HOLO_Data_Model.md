@@ -13,7 +13,111 @@ The core principle: **every entity that is currently a free-text field, a Google
 
 ## Entity Relationship Diagram
 
-> See accompanying ERD visualization. The diagram shows all entities, their fields, and the relationships between them (one-to-many, one-to-one).
+```mermaid
+erDiagram
+    CUSTOMERS ||--o{ SALES_ORDERS : places
+    SALES_ORDERS ||--o{ ORDER_ITEMS : "has line items"
+    PRODUCTS ||--o{ ORDER_ITEMS : "ordered as"
+    PRODUCTS ||--o{ HARVEST_LOGS : "harvested as"
+    PRODUCTS ||--o{ INVENTORY_SCANS : "scanned as"
+    PRODUCTS ||--o{ PACK_ITEMS : "packed as"
+    SALES_ORDERS ||--|| PACK_RECORDS : "verified by"
+    PACK_RECORDS ||--o{ PACK_ITEMS : "contains"
+    PACK_ITEMS ||--o{ INVENTORY_SCANS : "assigns"
+    PACK_RECORDS ||--|| BILLS_OF_LADING : "generates"
+    SHIPMENTS ||--o{ BILLS_OF_LADING : "carries"
+    CARRIERS ||--o{ SHIPMENTS : "operates"
+
+    CUSTOMERS {
+        int id PK
+        string name
+        string location
+        string address
+    }
+    PRODUCTS {
+        int id PK
+        string sku
+        string name
+        string pack_size
+        decimal unit_price
+        string scan_prefix
+    }
+    SALES_ORDERS {
+        int id PK
+        int customer_id FK
+        string po_number
+        date requested_delivery
+        date planned_ship
+        string status
+        timestamp entered_at
+    }
+    ORDER_ITEMS {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity_ordered
+        decimal unit_price
+        decimal discount
+    }
+    HARVEST_LOGS {
+        int id PK
+        int product_id FK
+        date harvest_date
+        int quantity_trays
+        string source
+    }
+    INVENTORY_SCANS {
+        int id PK
+        string scan_code
+        int product_id FK
+        int pack_item_id FK "nullable"
+        timestamp scanned_at
+        timestamp checkout_at "nullable"
+        boolean is_production
+        boolean is_donation
+    }
+    PACK_RECORDS {
+        int id PK
+        int order_id FK
+        string status
+        string packed_by
+        text notes
+        timestamp verified_at "nullable"
+    }
+    PACK_ITEMS {
+        int id PK
+        int pack_record_id FK
+        int product_id FK
+        int quantity_packed
+        text discrepancy_note "nullable"
+    }
+    BILLS_OF_LADING {
+        int id PK
+        string bol_number
+        int pack_record_id FK
+        int shipment_id FK
+        int pallet_count
+        decimal total_weight
+        string temp_requirements
+        string generated_by
+        timestamp generated_at
+    }
+    SHIPMENTS {
+        int id PK
+        int carrier_id FK
+        date ship_date
+        string status
+        timestamp departed_at "nullable"
+        timestamp delivered_at "nullable"
+    }
+    CARRIERS {
+        int id PK
+        string name
+        string type
+    }
+```
+
+The diagram maps the traceability chain described below: a harvested tray becomes a scanned case, gets assigned to a pack item during verification, is recorded on a BOL, and is shipped under a carrier — all joinable through the foreign keys shown above.
 
 ---
 

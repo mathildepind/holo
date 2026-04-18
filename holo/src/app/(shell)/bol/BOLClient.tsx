@@ -156,14 +156,14 @@ function generateBOLPDF(bol: EnrichedBOL) {
     }
 
     // Signature block
-    rowY += 8;
+    rowY += 24;
     doc.setDrawColor(200, 200, 200);
     doc.line(14, rowY, 80, rowY);
     doc.line(100, rowY, 166, rowY);
     doc.setFontSize(7);
     doc.setTextColor(120, 120, 120);
-    doc.text("PACKED & VERIFIED BY", 14, rowY + 4);
-    doc.text("CARRIER SIGNATURE", 100, rowY + 4);
+    doc.text("PACKED & VERIFIED BY", 14, rowY + 5);
+    doc.text("CARRIER SIGNATURE", 100, rowY + 5);
 
     // Footer
     const footY = 270;

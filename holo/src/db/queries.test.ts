@@ -19,6 +19,7 @@ import {
   getEnrichedOrder,
   getInventoryAvailability,
   getEnrichedBOLs,
+  createPackAndBOL,
 } from "./queries";
 
 describe("getCustomerById", () => {
@@ -428,5 +429,170 @@ describe("getEnrichedBOLs", () => {
         })
         .run()
     ).toThrow();
+  });
+});
+
+describe("createPackAndBOL", () => {
+  function seedOpenOrder(db: ReturnType<typeof createTestDb>) {
+    db.insert(customers)
+      .values({ name: "Bay Leaf Markets", location: "Palo Alto", address: "—" })
+      .run();
+    db.insert(products)
+      .values([
+        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" },
+        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, scanPrefix: "og-7201" },
+      ])
+      .run();
+    db.insert(salesOrders)
+      .values({
+        customerId: 1,
+        poNumber: "BL-0418",
+        requestedDelivery: "2026-04-19",
+        plannedShip: "2026-04-18",
+        status: "entered",
+        enteredAt: "2026-04-17T08:00:00Z",
+      })
+      .run();
+    db.insert(orderItems)
+      .values([
+        { orderId: 1, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
+        { orderId: 1, productId: 2, quantityOrdered: 24, unitPrice: 24, discount: 0 },
+      ])
+      .run();
+  }
+
+  const frozenNow = new Date("2026-04-18T05:00:00Z");
+
+  it("inserts pack record, pack items, shipment, carrier, and BOL atomically", () => {
+    const db = createTestDb();
+    seedOpenOrder(db);
+
+    const result = createPackAndBOL(db, {
+      orderId: 1,
+      draftItems: [
+        { productId: 1, quantityPacked: 48, discrepancyNote: null },
+        { productId: 2, quantityPacked: 22, discrepancyNote: "Short 2 — quality pull" },
+      ],
+      packNotes: "Clean pack.",
+      now: frozenNow,
+    });
+
+    expect(result.bolNumber).toMatch(/^BOL-2026-\d{4}$/);
+
+    const [bol] = getEnrichedBOLs(db);
+    expect(bol.id).toBe(result.bolId);
+    expect(bol.generatedAt).toBe(frozenNow.toISOString());
+    expect(bol.packRecord).toMatchObject({
+      status: "locked",
+      notes: "Clean pack.",
+      verifiedAt: frozenNow.toISOString(),
+    });
+    expect(bol.packRecord.items).toHaveLength(2);
+    expect(bol.packRecord.items[0]).toMatchObject({
+      quantityPacked: 48,
+      discrepancyNote: null,
+    });
+    expect(bol.packRecord.items[1]).toMatchObject({
+      quantityPacked: 22,
+      discrepancyNote: "Short 2 — quality pull",
+    });
+    expect(bol.shipment).toMatchObject({
+      status: "scheduled",
+      shipDate: "2026-04-18",
+      carrier: { name: "Hippo Truck", type: "internal" },
+    });
+  });
+
+  it("reuses the existing Hippo Truck carrier across multiple runs", () => {
+    const db = createTestDb();
+    seedOpenOrder(db);
+
+    createPackAndBOL(db, {
+      orderId: 1,
+      draftItems: [{ productId: 1, quantityPacked: 48, discrepancyNote: null }],
+      packNotes: "",
+      now: frozenNow,
+    });
+
+    // Add a second open order
+    db.insert(salesOrders)
+      .values({
+        customerId: 1,
+        poNumber: "BL-0419",
+        requestedDelivery: "2026-04-20",
+        plannedShip: "2026-04-19",
+        status: "entered",
+        enteredAt: "2026-04-18T08:00:00Z",
+      })
+      .run();
+    db.insert(orderItems)
+      .values({ orderId: 2, productId: 1, quantityOrdered: 12, unitPrice: 18.5, discount: 0 })
+      .run();
+
+    createPackAndBOL(db, {
+      orderId: 2,
+      draftItems: [{ productId: 1, quantityPacked: 12, discrepancyNote: null }],
+      packNotes: "",
+      now: frozenNow,
+    });
+
+    const allCarriers = db.select().from(carriers).all();
+    expect(allCarriers).toHaveLength(1);
+    expect(getEnrichedBOLs(db)).toHaveLength(2);
+  });
+
+  it("increments the BOL sequence number per run", () => {
+    const db = createTestDb();
+    seedOpenOrder(db);
+
+    const first = createPackAndBOL(db, {
+      orderId: 1,
+      draftItems: [{ productId: 1, quantityPacked: 48, discrepancyNote: null }],
+      packNotes: "",
+      now: frozenNow,
+    });
+
+    db.insert(salesOrders)
+      .values({
+        customerId: 1,
+        poNumber: "BL-0419",
+        requestedDelivery: "2026-04-20",
+        plannedShip: "2026-04-19",
+        status: "entered",
+        enteredAt: "2026-04-18T08:00:00Z",
+      })
+      .run();
+    db.insert(orderItems)
+      .values({ orderId: 2, productId: 1, quantityOrdered: 12, unitPrice: 18.5, discount: 0 })
+      .run();
+
+    const second = createPackAndBOL(db, {
+      orderId: 2,
+      draftItems: [{ productId: 1, quantityPacked: 12, discrepancyNote: null }],
+      packNotes: "",
+      now: frozenNow,
+    });
+
+    expect(second.bolNumber).not.toBe(first.bolNumber);
+  });
+
+  it("rolls back every insert when the order id does not exist", () => {
+    const db = createTestDb();
+    seedOpenOrder(db);
+
+    expect(() =>
+      createPackAndBOL(db, {
+        orderId: 999,
+        draftItems: [{ productId: 1, quantityPacked: 1, discrepancyNote: null }],
+        packNotes: "",
+        now: frozenNow,
+      })
+    ).toThrow();
+
+    expect(db.select().from(packRecords).all()).toHaveLength(0);
+    expect(db.select().from(packItems).all()).toHaveLength(0);
+    expect(db.select().from(shipments).all()).toHaveLength(0);
+    expect(db.select().from(billsOfLading).all()).toHaveLength(0);
+    expect(db.select().from(carriers).all()).toHaveLength(0);
   });
 });

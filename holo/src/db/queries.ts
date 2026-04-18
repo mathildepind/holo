@@ -2,12 +2,31 @@ import { eq, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import {
+  billsOfLading,
+  carriers,
   customers,
   harvestLogs,
   orderItems,
+  packItems,
+  packRecords,
   products,
   salesOrders,
+  shipments,
 } from "./schema";
+
+export type DraftPackItem = {
+  productId: number;
+  quantityPacked: number;
+  discrepancyNote: string | null;
+};
+
+export type CreatePackInput = {
+  orderId: number;
+  draftItems: DraftPackItem[];
+  packNotes: string;
+  packedBy?: string;
+  now?: Date;
+};
 
 export type DB = BetterSQLite3Database<typeof schema>;
 
@@ -35,6 +54,101 @@ export function getEnrichedOrder(db: DB, id: number) {
       },
     })
     .sync();
+}
+
+export function createPackAndBOL(db: DB, input: CreatePackInput) {
+  const when = input.now ?? new Date();
+  const nowIso = when.toISOString();
+  const packedBy = input.packedBy ?? "L. Greens";
+
+  return db.transaction((tx) => {
+    const order = tx
+      .select()
+      .from(salesOrders)
+      .where(eq(salesOrders.id, input.orderId))
+      .get();
+    if (!order) throw new Error(`Order ${input.orderId} not found`);
+
+    const inserted = tx
+      .insert(packRecords)
+      .values({
+        orderId: input.orderId,
+        status: "locked",
+        packedBy,
+        notes: input.packNotes,
+        verifiedAt: nowIso,
+      })
+      .returning({ id: packRecords.id })
+      .get();
+    const packRecordId = inserted.id;
+
+    tx.insert(packItems)
+      .values(
+        input.draftItems.map((d) => ({
+          packRecordId,
+          productId: d.productId,
+          quantityPacked: d.quantityPacked,
+          discrepancyNote: d.discrepancyNote,
+        }))
+      )
+      .run();
+
+    let hippoTruck = tx
+      .select()
+      .from(carriers)
+      .where(eq(carriers.name, "Hippo Truck"))
+      .get();
+    if (!hippoTruck) {
+      hippoTruck = tx
+        .insert(carriers)
+        .values({ name: "Hippo Truck", type: "internal" })
+        .returning()
+        .get();
+    }
+
+    const shipment = tx
+      .insert(shipments)
+      .values({
+        carrierId: hippoTruck.id,
+        shipDate: order.plannedShip,
+        status: "scheduled",
+        departedAt: null,
+        deliveredAt: null,
+      })
+      .returning({ id: shipments.id })
+      .get();
+    const shipmentId = shipment.id;
+
+    const countRow = tx
+      .select({ c: sql<number>`count(*)` })
+      .from(billsOfLading)
+      .get();
+    const seq = (countRow?.c ?? 0) + 1;
+    const year = when.getUTCFullYear();
+    const bolNumber = `BOL-${year}-${String(seq).padStart(4, "0")}`;
+
+    const totalWeight = Math.round(
+      input.draftItems.reduce((s, d) => s + d.quantityPacked * 2.5, 0)
+    );
+    const palletCount = Math.max(1, Math.ceil(totalWeight / 400));
+
+    const bol = tx
+      .insert(billsOfLading)
+      .values({
+        bolNumber,
+        packRecordId,
+        shipmentId,
+        palletCount,
+        totalWeight,
+        tempRequirements: "34-38\u00B0F",
+        generatedBy: packedBy,
+        generatedAt: nowIso,
+      })
+      .returning({ id: billsOfLading.id })
+      .get();
+
+    return { bolId: bol.id, packRecordId, shipmentId, bolNumber };
+  });
 }
 
 export function getEnrichedBOLs(db: DB) {

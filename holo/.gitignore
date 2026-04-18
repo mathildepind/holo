@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sqlite
+/holo.db
+/holo.db-journal
+/holo.db-wal
+/holo.db-shm

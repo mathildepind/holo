@@ -54,6 +54,62 @@ export const harvestLogs = sqliteTable("harvest_logs", {
   source: text("source", { enum: ["fresh", "cooler"] }).notNull(),
 });
 
+export const packRecords = sqliteTable("pack_records", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  orderId: integer("order_id")
+    .notNull()
+    .references(() => salesOrders.id),
+  status: text("status", { enum: ["draft", "verified", "locked"] }).notNull(),
+  packedBy: text("packed_by").notNull(),
+  notes: text("notes").notNull(),
+  verifiedAt: text("verified_at"),
+});
+
+export const packItems = sqliteTable("pack_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  packRecordId: integer("pack_record_id")
+    .notNull()
+    .references(() => packRecords.id),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  quantityPacked: integer("quantity_packed").notNull(),
+  discrepancyNote: text("discrepancy_note"),
+});
+
+export const carriers = sqliteTable("carriers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["internal", "external"] }).notNull(),
+});
+
+export const shipments = sqliteTable("shipments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  carrierId: integer("carrier_id")
+    .notNull()
+    .references(() => carriers.id),
+  shipDate: text("ship_date").notNull(),
+  status: text("status", { enum: ["scheduled", "in_transit", "delivered"] }).notNull(),
+  departedAt: text("departed_at"),
+  deliveredAt: text("delivered_at"),
+});
+
+export const billsOfLading = sqliteTable("bills_of_lading", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  bolNumber: text("bol_number").notNull().unique(),
+  packRecordId: integer("pack_record_id")
+    .notNull()
+    .references(() => packRecords.id),
+  shipmentId: integer("shipment_id")
+    .notNull()
+    .references(() => shipments.id),
+  palletCount: integer("pallet_count").notNull(),
+  totalWeight: real("total_weight").notNull(),
+  tempRequirements: text("temp_requirements").notNull(),
+  generatedBy: text("generated_by").notNull(),
+  generatedAt: text("generated_at").notNull(),
+});
+
 export const customersRelations = relations(customers, ({ many }) => ({
   orders: many(salesOrders),
 }));
@@ -78,5 +134,51 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   product: one(products, {
     fields: [orderItems.productId],
     references: [products.id],
+  }),
+}));
+
+export const packRecordsRelations = relations(packRecords, ({ one, many }) => ({
+  order: one(salesOrders, {
+    fields: [packRecords.orderId],
+    references: [salesOrders.id],
+  }),
+  items: many(packItems),
+  bol: one(billsOfLading, {
+    fields: [packRecords.id],
+    references: [billsOfLading.packRecordId],
+  }),
+}));
+
+export const packItemsRelations = relations(packItems, ({ one }) => ({
+  packRecord: one(packRecords, {
+    fields: [packItems.packRecordId],
+    references: [packRecords.id],
+  }),
+  product: one(products, {
+    fields: [packItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const carriersRelations = relations(carriers, ({ many }) => ({
+  shipments: many(shipments),
+}));
+
+export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
+  carrier: one(carriers, {
+    fields: [shipments.carrierId],
+    references: [carriers.id],
+  }),
+  bols: many(billsOfLading),
+}));
+
+export const billsOfLadingRelations = relations(billsOfLading, ({ one }) => ({
+  packRecord: one(packRecords, {
+    fields: [billsOfLading.packRecordId],
+    references: [packRecords.id],
+  }),
+  shipment: one(shipments, {
+    fields: [billsOfLading.shipmentId],
+    references: [shipments.id],
   }),
 }));

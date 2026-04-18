@@ -17,6 +17,8 @@ import {
   getProductById,
   getProductBySku,
   getEnrichedOrder,
+  getOpenOrders,
+  getAllEnrichedOrders,
   getInventoryAvailability,
   getEnrichedBOLs,
   createPackAndBOL,
@@ -181,6 +183,76 @@ describe("getEnrichedOrder", () => {
         .values({ orderId: 999, productId: 1, quantityOrdered: 1, unitPrice: 1, discount: 0 })
         .run()
     ).toThrow();
+  });
+});
+
+describe("getAllEnrichedOrders / getOpenOrders", () => {
+  function seedMixedOrders(db: ReturnType<typeof createTestDb>) {
+    db.insert(customers)
+      .values({ name: "Bay Leaf Markets", location: "Palo Alto", address: "—" })
+      .run();
+    db.insert(products)
+      .values({ sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" })
+      .run();
+    db.insert(salesOrders)
+      .values([
+        {
+          customerId: 1,
+          poNumber: "BL-OPEN-1",
+          requestedDelivery: "2026-04-20",
+          plannedShip: "2026-04-19",
+          status: "entered",
+          enteredAt: "2026-04-15T08:00:00Z",
+        },
+        {
+          customerId: 1,
+          poNumber: "BL-PAST-1",
+          requestedDelivery: "2026-04-10",
+          plannedShip: "2026-04-09",
+          status: "delivered",
+          enteredAt: "2026-04-05T08:00:00Z",
+        },
+        {
+          customerId: 1,
+          poNumber: "BL-OPEN-2",
+          requestedDelivery: "2026-04-21",
+          plannedShip: "2026-04-20",
+          status: "entered",
+          enteredAt: "2026-04-16T08:00:00Z",
+        },
+      ])
+      .run();
+    db.insert(orderItems)
+      .values([
+        { orderId: 1, productId: 1, quantityOrdered: 10, unitPrice: 18.5, discount: 0 },
+        { orderId: 2, productId: 1, quantityOrdered: 20, unitPrice: 18.5, discount: 0 },
+        { orderId: 3, productId: 1, quantityOrdered: 15, unitPrice: 18.5, discount: 0 },
+      ])
+      .run();
+  }
+
+  it("getAllEnrichedOrders returns every order with customer + items joined", () => {
+    const db = createTestDb();
+    seedMixedOrders(db);
+
+    const rows = getAllEnrichedOrders(db);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((o) => o.customer.name === "Bay Leaf Markets")).toBe(true);
+    expect(rows.every((o) => o.items.length === 1 && o.items[0].product.sku === "SM-645")).toBe(true);
+  });
+
+  it("getOpenOrders returns only orders with status = entered", () => {
+    const db = createTestDb();
+    seedMixedOrders(db);
+
+    const open = getOpenOrders(db);
+    expect(open.map((o) => o.poNumber)).toEqual(["BL-OPEN-1", "BL-OPEN-2"]);
+  });
+
+  it("both helpers return [] when no orders exist", () => {
+    const db = createTestDb();
+    expect(getAllEnrichedOrders(db)).toEqual([]);
+    expect(getOpenOrders(db)).toEqual([]);
   });
 });
 

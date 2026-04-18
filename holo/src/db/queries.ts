@@ -42,16 +42,29 @@ export function getProductBySku(db: DB, sku: string) {
   return db.select().from(products).where(eq(products.sku, sku)).get();
 }
 
+const enrichedOrderWith = {
+  customer: true,
+  items: { with: { product: true } },
+} as const;
+
 export function getEnrichedOrder(db: DB, id: number) {
   return db.query.salesOrders
     .findFirst({
       where: eq(salesOrders.id, id),
-      with: {
-        customer: true,
-        items: {
-          with: { product: true },
-        },
-      },
+      with: enrichedOrderWith,
+    })
+    .sync();
+}
+
+export function getAllEnrichedOrders(db: DB) {
+  return db.query.salesOrders.findMany({ with: enrichedOrderWith }).sync();
+}
+
+export function getOpenOrders(db: DB) {
+  return db.query.salesOrders
+    .findMany({
+      where: eq(salesOrders.status, "entered"),
+      with: enrichedOrderWith,
     })
     .sync();
 }

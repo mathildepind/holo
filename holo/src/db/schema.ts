@@ -44,6 +44,16 @@ export const orderItems = sqliteTable("order_items", {
   discount: real("discount").notNull(),
 });
 
+export const harvestLogs = sqliteTable("harvest_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  harvestDate: text("harvest_date").notNull(),
+  quantityTrays: integer("quantity_trays").notNull(),
+  source: text("source", { enum: ["fresh", "cooler"] }).notNull(),
+});
+
 export const customersRelations = relations(customers, ({ many }) => ({
   orders: many(salesOrders),
 }));

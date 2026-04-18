@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
-import { getStoredBOLs } from "@/lib/store";
 import { resolveStatus, bolsByOrderId } from "@/lib/order-status";
 import type { EnrichedBOL, EnrichedOrder } from "@/lib/types";
 import {
@@ -393,10 +392,7 @@ export default function OrdersClient() {
 
   useEffect(() => {
     apiFetch<EnrichedOrder[]>("/api/orders/history").then(setOrders);
-    apiFetch<EnrichedBOL[]>("/api/bols").then((mockBols) => {
-      const stored = getStoredBOLs();
-      setBols([...stored, ...mockBols]);
-    });
+    apiFetch<EnrichedBOL[]>("/api/bols").then(setBols);
   }, []);
 
   const bolByOrderId = useMemo(() => bolsByOrderId(bols ?? []), [bols]);

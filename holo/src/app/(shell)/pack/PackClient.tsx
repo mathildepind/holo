@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { createPackAndBOL } from "@/lib/store";
 import type { EnrichedOrder, Product } from "@/lib/types";
 import { Lock, AlertTriangle, CheckCircle, ChevronRight, ArrowLeft, FileText } from "lucide-react";
 
@@ -132,10 +131,22 @@ export default function PackClient() {
     setState("reviewing");
   }
 
-  function handleLock() {
-    if (selectedOrder) {
-      createPackAndBOL(selectedOrder, draftItems, packNotes);
-    }
+  async function handleLock() {
+    if (!selectedOrder) return;
+    const res = await fetch("/api/pack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: selectedOrder.id,
+        draftItems: draftItems.map((d) => ({
+          productId: d.productId,
+          quantityPacked: typeof d.quantityPacked === "number" ? d.quantityPacked : 0,
+          discrepancyNote: d.discrepancyNote.trim() || null,
+        })),
+        packNotes,
+      }),
+    });
+    if (!res.ok) throw new Error(`POST /api/pack failed: ${res.status}`);
     setLockedAt(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
     setState("locked");
   }

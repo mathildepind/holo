@@ -43,7 +43,6 @@ erDiagram
     }
     PRODUCTS {
         int id PK
-        string sku
         string name
         string pack_size
         decimal unit_price
@@ -167,19 +166,18 @@ Separate table because a customer can have multiple receiving docks (e.g., a reg
 
 ### PRODUCTS
 
-Maps SKU descriptions to scan code prefixes, connecting the inventory and order systems that are currently disconnected.
+Maps product descriptions to scan code prefixes, connecting the inventory and order systems that are currently disconnected.
 
 | Field | Type | Notes |
 |-------|------|-------|
 | id | int, PK | |
-| sku | string | Internal SKU code from the SKU workbook, e.g., `P006` |
 | name | string | e.g., "Spring Mix" |
 | pack_size | string | e.g., "6 x 4.5 oz" |
 | unit_price | decimal | Default price (can be overridden on order items) |
 | case_weight_lb | decimal | Per-case weight, used to compute `BILLS_OF_LADING.total_weight` |
 | scan_prefix | string | Maps to inventory scan codes, e.g., "og-9024" → Spring Mix |
 
-**Why this is new:** This is the most critical structural gap in the current schema. Three independent product identifiers exist today with no table joining them: the internal `P001`–`P007` SKUs in the SKU workbook, the free-text `sku_description` on order line items (e.g., "Spring Mix 6 x 4.5 oz"), and the scan-code prefixes on inventory scans (e.g., `og-9024-25A09-0001`). `products` reconciles all three. The `case_weight_lb` column is what makes `BILLS_OF_LADING.total_weight` computable instead of hardcoded.
+**Why this is new:** This is the most critical structural gap in the current schema. Two independent product identifiers exist today with no table joining them: the free-text `sku_description` on order line items (e.g., "Spring Mix 6 x 4.5 oz") and the scan-code prefixes on inventory scans (e.g., `og-9024-25A09-0001`). `products` reconciles the two so scans and order lines can be joined to a single record. The `case_weight_lb` column is what makes `BILLS_OF_LADING.total_weight` computable instead of hardcoded.
 
 ---
 
@@ -382,22 +380,22 @@ This chain is unbroken and queryable — addressing the food safety and audit co
 
 ## Source-data mapping
 
-The model reconciles the three sample files and the SKU workbook.
+The model is derivable from the three sample CSVs.
 
 | File | Rows | Role in the model |
 |---|---|---|
-| `HH SKUs.numbers` | 7 | Populates `PRODUCTS.sku` (`P001`–`P007`) and `PRODUCTS.name` |
 | `customer_orders.csv` | 10 | Populates `SALES_ORDERS`, `CUSTOMERS`, `CUSTOMER_LOCATIONS`; `load_id` → `SHIPMENTS` |
-| `customer_order_items.csv` | 24 | Populates `ORDER_ITEMS`; `sku_description` matched to `PRODUCTS.name + pack_size` |
-| `inventory_scans.csv` | 62 | Populates `INVENTORY_SCANS`; scan-code prefix → `PRODUCTS.scan_prefix` |
+| `customer_order_items.csv` | 24 | Populates `ORDER_ITEMS`; `sku_description` seeds `PRODUCTS.name + pack_size` |
+| `inventory_scans.csv` | 62 | Populates `INVENTORY_SCANS`; scan-code prefix seeds `PRODUCTS.scan_prefix` |
 
-Three independent product identifiers exist today and `PRODUCTS` is where they converge:
+Products exist under two independent identifiers in the source data, and `PRODUCTS` is where they converge:
 
 | System | Example | Source column |
 |---|---|---|
-| Internal SKU | `P006` | `HH SKUs.numbers.SKU` |
 | Free-text description | `Spring Mix 6 x 4.5 oz` | `customer_order_items.sku_description` |
 | Scan prefix | `og-9024` | First two segments of `inventory_scans.scan_code` |
+
+The mapping between the two is inferred from co-occurrence: an order whose line items list `Spring Mix 6 x 4.5 oz` ships with scans whose prefix is `og-9024`, so those two identifiers describe the same product.
 
 Validation against the sample data confirmed the model handles:
 - A real partial-fulfillment case (order 1003 shipped 5 of 6 Spring Mix) — covered by `SALES_ORDERS.status = partially_fulfilled` and `PACK_ITEMS.quantity_packed < ORDER_ITEMS.quantity_ordered`.

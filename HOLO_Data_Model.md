@@ -377,3 +377,56 @@ For any given case of product, the system can answer: *When was it harvested? Wh
 `INVENTORY_SCANS` → `PACK_ITEMS` → `PACK_RECORDS` → `BILLS_OF_LADING` → `SHIPMENTS`
 
 This chain is unbroken and queryable — addressing the food safety and audit concerns raised in discovery.
+
+---
+
+## Source-data mapping
+
+The model reconciles the three sample files and the SKU workbook.
+
+| File | Rows | Role in the model |
+|---|---|---|
+| `HH SKUs.numbers` | 7 | Populates `PRODUCTS.sku` (`P001`–`P007`) and `PRODUCTS.name` |
+| `customer_orders.csv` | 10 | Populates `SALES_ORDERS`, `CUSTOMERS`, `CUSTOMER_LOCATIONS`; `load_id` → `SHIPMENTS` |
+| `customer_order_items.csv` | 24 | Populates `ORDER_ITEMS`; `sku_description` matched to `PRODUCTS.name + pack_size` |
+| `inventory_scans.csv` | 62 | Populates `INVENTORY_SCANS`; scan-code prefix → `PRODUCTS.scan_prefix` |
+
+Three independent product identifiers exist today and `PRODUCTS` is where they converge:
+
+| System | Example | Source column |
+|---|---|---|
+| Internal SKU | `P006` | `HH SKUs.numbers.SKU` |
+| Free-text description | `Spring Mix 6 x 4.5 oz` | `customer_order_items.sku_description` |
+| Scan prefix | `og-9024` | First two segments of `inventory_scans.scan_code` |
+
+Validation against the sample data confirmed the model handles:
+- A real partial-fulfillment case (order 1003 shipped 5 of 6 Spring Mix) — covered by `SALES_ORDERS.status = partially_fulfilled` and `PACK_ITEMS.quantity_packed < ORDER_ITEMS.quantity_ordered`.
+- A real ad-hoc box at the pack table (scan 835 has `is_checkout_overridden` + `is_added_in_fulfillment` both set) — covered by retaining both flags on `INVENTORY_SCANS`.
+
+---
+
+## Open gaps / deferred decisions
+
+Items considered during the sample-data review but **not** incorporated in the current schema. Carried into the PRD as follow-ups.
+
+| # | Gap | Recommendation | Deferred because |
+|---|---|---|---|
+| 1 | `packed_by` / `generated_by` are strings, no `USERS` table | Add `USERS` + FK | Not blocking for prototype; trivial to add later |
+| 2 | `INVENTORY_SCANS` has no FK to `HARVEST_LOGS` — linked only by product + date | Add `harvest_log_id` FK | Date-based join is adequate while sample volume is small |
+| 3 | `SALES_ORDERS.fulfilled_timestamp` semantics overlap with `PACK_RECORDS.verified_at` | Pick one source of truth (likely drop from orders, derive via query) | Needs a quick stakeholder confirm before removing |
+| 4 | `is_donation` is a boolean but donations have no recipient, no delivery date | `DONATION_RECIPIENTS` table + pseudo-order flow | No donations in sample; ship when the flow is defined |
+| 5 | Locked `PACK_RECORDS` cannot be safely amended (audit break) | Append-only versioning or `superseded_by_id` column | Prototype treats lock as final; revisit for production |
+| 6 | `customer` and `retailer` were separate columns in the source but always identical | Potentially split back into `customer_id` + `retailer_id` | Stakeholder-gated (see Question 1 below) |
+| 7 | `ORDER_ITEMS.discount` unit (dollars vs percent) untestable — sample is 0 everywhere | Add a unit constraint / column | Cosmetic; confirm with finance before choosing |
+| 8 | Batch code on `INVENTORY_SCANS` is parsed but `HARVEST_BATCHES` table is not modeled | Promote to its own table keyed by `batch_code` | Current flat column is enough for recall queries; promote if batch-level metadata (origin tray, robot route) becomes important |
+
+## Questions for stakeholders
+
+Confirming these would tighten the model or collapse deferred items above.
+
+1. **Does a customer ever have multiple delivery locations?** Drives whether `CUSTOMER_LOCATIONS` stays separate (yes) or collapses back onto `CUSTOMERS` (no).
+2. **Does case weight vary by harvest run or only by SKU?** If only by SKU, `PRODUCTS.case_weight_lb` is sufficient. If it varies, weight belongs on `PACK_ITEMS` or `HARVEST_LOGS`.
+3. **When an ad-hoc box is added at the pack table, is it always for the same SKU, or does it substitute a different SKU?** Confirms whether `substituted_for_order_item_id` is the right structure.
+4. **Is the batch segment (`25A09`) assigned by the robots per harvest run, or per individual tray?** Drives whether `HARVEST_BATCHES` is worth promoting to its own table.
+5. **Will `retailer` ever differ from `customer` in practice?** If yes, re-introduce `SALES_ORDERS.retailer_id`.
+6. **For order 1003's short pick — how does that reconcile today against the BOL and the invoice?** Confirms `partially_fulfilled` solves a real pain rather than a sample-data artifact.

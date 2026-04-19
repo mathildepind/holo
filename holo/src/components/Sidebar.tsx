@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, PackageCheck, ClipboardList } from "lucide-react";
+import { DEMO_TODAY } from "@/lib/mock-data";
 
 const nav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -11,18 +11,10 @@ const nav = [
   { href: "/orders",    icon: ClipboardList,   label: "Order History" },
 ];
 
-function useLiveClock() {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  if (!now) return "";
-  return now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    + " · "
-    + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
+// The demo is a static snapshot of the early-morning shift on DEMO_TODAY.
+const DEMO_CLOCK = new Date(`${DEMO_TODAY}T05:00:00Z`).toLocaleDateString("en-US", {
+  month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+}) + " · 05:00";
 
 export default function Sidebar({
   open = false,
@@ -32,7 +24,6 @@ export default function Sidebar({
   onItemClick?: () => void;
 }) {
   const path = usePathname();
-  const clock = useLiveClock();
 
   return (
     <aside
@@ -76,7 +67,7 @@ export default function Sidebar({
         }}
       >
         <span className="status-dot green" style={{ animation: "pulse-green 2s ease-in-out infinite" }} />
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{clock}</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{DEMO_CLOCK}</span>
       </div>
 
       {/* Nav */}

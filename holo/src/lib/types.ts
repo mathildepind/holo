@@ -11,6 +11,7 @@ export type Product = {
   name: string;
   packSize: string;
   unitPrice: number;
+  caseWeightLb: number;
   scanPrefix: string;
 };
 

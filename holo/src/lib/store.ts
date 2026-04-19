@@ -83,7 +83,7 @@ export function createPackAndBOL(
   const bolNumber = `BOL-2025-${String(seq).padStart(4, "0")}`;
 
   // Build bill of lading
-  const totalWeight = packItemsList.reduce((s, i) => s + i.quantityPacked * 2.5, 0);
+  const totalWeight = packItemsList.reduce((s, i) => s + i.quantityPacked * i.product.caseWeightLb, 0);
   const palletCount = Math.max(1, Math.ceil(totalWeight / 400));
 
   const bol: BillOfLading = {

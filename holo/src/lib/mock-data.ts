@@ -11,13 +11,13 @@ export const customers: Customer[] = [
 ];
 
 export const products: Product[] = [
-  { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, scanPrefix: "og-9024" },
-  { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, scanPrefix: "og-7201" },
-  { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, scanPrefix: "og-7310" },
-  { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, scanPrefix: "og-8841" },
-  { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, scanPrefix: "og-9531" },
-  { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, scanPrefix: "og-8650" },
-  { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, scanPrefix: "og-9140" },
+  { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
+  { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, caseWeightLb: 2.75, scanPrefix: "og-7201" },
+  { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, caseWeightLb: 2.5, scanPrefix: "og-7310" },
+  { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, caseWeightLb: 2.5, scanPrefix: "og-8841" },
+  { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, caseWeightLb: 2.5, scanPrefix: "og-9531" },
+  { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, caseWeightLb: 2.5, scanPrefix: "og-8650" },
+  { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, caseWeightLb: 2.5, scanPrefix: "og-9140" },
 ];
 
 export const salesOrders: SalesOrder[] = [

@@ -24,6 +24,7 @@ const product: Product = {
   name: "Spring Mix",
   packSize: "6 × 4.5 oz",
   unitPrice: 18.5,
+  caseWeightLb: 2.5,
   scanPrefix: "og-9024",
 };
 
@@ -102,7 +103,7 @@ describe("store.ts — browser environment", () => {
       expect(stored[0].bolNumber).toBe(bol.bolNumber);
     });
 
-    it("computes totalWeight at 2.5 lb/case and palletCount at ceil(weight/400), min 1", () => {
+    it("computes totalWeight from product caseWeightLb and palletCount at ceil(weight/400), min 1", () => {
       // 48 * 2.5 = 120 lb → 1 pallet (min)
       const small = createPackAndBOL(
         order,

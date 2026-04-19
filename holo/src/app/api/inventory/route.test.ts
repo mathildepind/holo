@@ -12,7 +12,7 @@ describe("GET /api/inventory", () => {
 
     for (const row of body) {
       expect(row.product.sku).toEqual(expect.any(String));
-      expect(row.totalAvailable).toBe(row.freshTrays + row.coolerTrays);
+      expect(row.totalAvailable).toBe(row.freshCases + row.coolerCases);
       expect(row.gap).toBe(row.totalAvailable - row.totalCommitted);
     }
   });

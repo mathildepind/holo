@@ -52,7 +52,7 @@ export default function DashboardClient() {
 
   const shortProducts = inventory.filter((i) => i.gap < 0);
   const lowProducts = inventory.filter((i) => i.gap >= 0 && i.gap < 10);
-  const totalTrays = inventory.reduce((s, i) => s + i.totalAvailable, 0);
+  const totalCases = inventory.reduce((s, i) => s + i.totalAvailable, 0);
   const totalCommitted = inventory.reduce((s, i) => s + i.totalCommitted, 0);
 
   return (
@@ -77,13 +77,13 @@ export default function DashboardClient() {
       >
         {[
           {
-            label: "Total Trays Available",
-            value: totalTrays,
+            label: "Total Cases Available",
+            value: totalCases,
             icon: <Package size={14} />,
             color: "var(--green)",
           },
           {
-            label: "Trays Committed",
+            label: "Cases Committed",
             value: totalCommitted,
             icon: <ShoppingCart size={14} />,
             color: "var(--text-muted)",
@@ -160,7 +160,7 @@ export default function DashboardClient() {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Fresh</th>
+                <th>Today&apos;s harvest</th>
                 <th>Cooler</th>
                 <th>Total</th>
                 <th>Committed</th>
@@ -168,14 +168,14 @@ export default function DashboardClient() {
               </tr>
             </thead>
             <tbody>
-              {inventory.map(({ product, freshTrays, coolerTrays, totalAvailable, totalCommitted: committed, gap }) => (
+              {inventory.map(({ product, freshCases, coolerCases, totalAvailable, totalCommitted: committed, gap }) => (
                 <tr key={product.id}>
                   <td>
                     <div style={{ fontWeight: 500, color: "var(--text)" }}>{product.name}</div>
                     <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 1 }}>{product.sku}</div>
                   </td>
-                  <td className="num-ok">{freshTrays}</td>
-                  <td style={{ color: "var(--text-muted)" }}>{coolerTrays}</td>
+                  <td className="num-ok">{freshCases}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{coolerCases}</td>
                   <td style={{ fontWeight: 500 }}>{totalAvailable}</td>
                   <td style={{ color: "var(--text-muted)" }}>{committed}</td>
                   <td>
@@ -186,7 +186,7 @@ export default function DashboardClient() {
             </tbody>
           </table>
           <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", fontSize: 10, color: "var(--text-dim)" }}>
-            {"Fresh = harvested tonight · Cooler = yesterday's stock"}
+            {"Today's harvest = cases scanned today · Cooler = cases with no checkout scan"}
           </div>
         </div>
 

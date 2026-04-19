@@ -1,8 +1,11 @@
 import type {
   Customer, Product, SalesOrder, OrderItem,
-  HarvestLog, PackRecord, PackItem, Carrier, Shipment, BillOfLading,
+  InventoryScan, PackRecord, PackItem, Carrier, Shipment, BillOfLading,
   EnrichedOrder, EnrichedPackRecord, EnrichedBOL, InventoryAvailability,
 } from "./types";
+
+// Simulated "today" for the demo — dates in the seed data are anchored to this.
+export const DEMO_TODAY = "2025-04-15";
 
 export const customers: Customer[] = [
   { id: 1, name: "Bay Leaf Markets", location: "Bay Leaf - Palo Alto", address: "340 University Ave, Palo Alto, CA 94301" },
@@ -12,12 +15,12 @@ export const customers: Customer[] = [
 
 export const products: Product[] = [
   { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
-  { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, caseWeightLb: 2.75, scanPrefix: "og-7201" },
-  { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, caseWeightLb: 2.5, scanPrefix: "og-7310" },
-  { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, caseWeightLb: 2.5, scanPrefix: "og-8841" },
-  { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, caseWeightLb: 2.5, scanPrefix: "og-9531" },
-  { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, caseWeightLb: 2.5, scanPrefix: "og-8650" },
-  { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, caseWeightLb: 2.5, scanPrefix: "og-9140" },
+  { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, caseWeightLb: 2.75, scanPrefix: "cv-1912" },
+  { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, caseWeightLb: 2.5, scanPrefix: "cv-1905" },
+  { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, caseWeightLb: 2.5, scanPrefix: "og-1974" },
+  { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, caseWeightLb: 2.5, scanPrefix: "og-1981" },
+  { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, caseWeightLb: 2.5, scanPrefix: "og-1936" },
+  { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, caseWeightLb: 2.5, scanPrefix: "cv-1943" },
 ];
 
 export const salesOrders: SalesOrder[] = [
@@ -48,19 +51,97 @@ export const orderItems: OrderItem[] = [
   { id: 1012, orderId: 105, productId: 5, quantityOrdered: 24, unitPrice: 19.75, discount: 0 },
 ];
 
-export const harvestLogs: HarvestLog[] = [
-  // Today's fresh harvest
-  { id: 1, productId: 1, harvestDate: "2025-04-15", quantityTrays: 60, source: "fresh" },
-  { id: 2, productId: 2, harvestDate: "2025-04-15", quantityTrays: 30, source: "fresh" },
-  { id: 3, productId: 3, harvestDate: "2025-04-15", quantityTrays: 40, source: "fresh" },
-  { id: 4, productId: 4, harvestDate: "2025-04-15", quantityTrays: 15, source: "fresh" },
-  { id: 5, productId: 5, harvestDate: "2025-04-15", quantityTrays: 20, source: "fresh" },
-  { id: 9, productId: 6, harvestDate: "2025-04-15", quantityTrays: 25, source: "fresh" },
-  { id: 10, productId: 7, harvestDate: "2025-04-15", quantityTrays: 18, source: "fresh" },
-  // Cooler stock
-  { id: 6, productId: 1, harvestDate: "2025-04-14", quantityTrays: 12, source: "cooler" },
-  { id: 7, productId: 2, harvestDate: "2025-04-14", quantityTrays: 8, source: "cooler" },
-  { id: 8, productId: 4, harvestDate: "2025-04-14", quantityTrays: 6, source: "cooler" },
+// Seeded from the case-study `inventory_scans.csv` sample (62 rows).
+// Dates shifted by +27 days so the "today" date (2025-04-15) lines up with the
+// order-1007 harvest in the sample. Scans are 1 case each.
+// Product id is looked up from the scan prefix:
+//   og-9024 → Spring Mix (1)         cv-1912 → Baby Romaine (2)
+//   cv-1905 → Crispy Leaf (3)        og-1974 → Organic Arugula (4)
+//   og-1981 → Organic Baby Kale (5)  og-1936 → Organic Spinach (6)
+//   cv-1943 → Tender Greens (7)
+function scan(
+  id: number, scanCode: string, productId: number,
+  scannedAt: string, checkoutAt: string | null, customerOrderId: number | null,
+  flags: { overridden?: boolean; addedInFulfillment?: boolean } = {},
+): InventoryScan {
+  return {
+    id, scanCode, productId, scannedAt, checkoutAt, customerOrderId,
+    isProduction: true, isDonation: false,
+    isCheckoutOverridden: flags.overridden ?? false,
+    isAddedInFulfillment: flags.addedInFulfillment ?? false,
+  };
+}
+
+export const inventoryScans: InventoryScan[] = [
+  // Order 1001 — harvested 2025-03-30, checked out same day 09:05Z
+  scan(801, "og-9024-25A09-0001", 1, "2025-03-30T03:46:00Z", "2025-03-30T09:05:00Z", 1001),
+  scan(802, "og-9024-25A09-0002", 1, "2025-03-30T03:46:30Z", "2025-03-30T09:05:00Z", 1001),
+  scan(803, "og-9024-25A09-0003", 1, "2025-03-30T03:47:00Z", "2025-03-30T09:05:00Z", 1001),
+  scan(804, "og-9024-25A09-0004", 1, "2025-03-30T03:47:30Z", "2025-03-30T09:05:00Z", 1001),
+  scan(805, "cv-1912-25A09-0001", 2, "2025-03-30T03:50:00Z", "2025-03-30T09:05:00Z", 1001),
+  scan(806, "cv-1912-25A09-0002", 2, "2025-03-30T03:50:30Z", "2025-03-30T09:05:00Z", 1001),
+  scan(807, "cv-1912-25A09-0003", 2, "2025-03-30T03:51:00Z", "2025-03-30T09:05:00Z", 1001),
+  scan(808, "cv-1943-25A09-0001", 7, "2025-03-30T03:53:00Z", "2025-03-30T09:05:00Z", 1001),
+  scan(809, "cv-1943-25A09-0002", 7, "2025-03-30T03:53:30Z", "2025-03-30T09:05:00Z", 1001),
+  // Order 1002 — harvested 2025-03-31, checked out same day 09:30Z
+  scan(810, "og-1974-25A09-0001", 4, "2025-03-31T04:11:00Z", "2025-03-31T09:30:00Z", 1002),
+  scan(811, "og-1974-25A09-0002", 4, "2025-03-31T04:11:30Z", "2025-03-31T09:30:00Z", 1002),
+  scan(812, "og-1974-25A09-0003", 4, "2025-03-31T04:12:00Z", "2025-03-31T09:30:00Z", 1002),
+  scan(813, "og-1981-25A09-0001", 5, "2025-03-31T04:14:00Z", "2025-03-31T09:30:00Z", 1002),
+  scan(814, "og-1981-25A09-0002", 5, "2025-03-31T04:14:30Z", "2025-03-31T09:30:00Z", 1002),
+  // Order 1003 — harvested 2025-04-02, checked out same day 08:15Z
+  scan(815, "og-9024-25A09-0005", 1, "2025-04-02T02:56:00Z", "2025-04-02T08:15:00Z", 1003),
+  scan(816, "og-9024-25A09-0006", 1, "2025-04-02T02:56:30Z", "2025-04-02T08:15:00Z", 1003),
+  scan(817, "og-9024-25A09-0007", 1, "2025-04-02T02:57:00Z", "2025-04-02T08:15:00Z", 1003),
+  scan(818, "og-9024-25A09-0008", 1, "2025-04-02T02:57:30Z", "2025-04-02T08:15:00Z", 1003),
+  scan(819, "og-9024-25A09-0009", 1, "2025-04-02T02:58:00Z", "2025-04-02T08:15:00Z", 1003),
+  scan(820, "cv-1912-25A09-0004", 2, "2025-04-02T03:00:00Z", "2025-04-02T08:15:00Z", 1003),
+  scan(821, "cv-1912-25A09-0005", 2, "2025-04-02T03:00:30Z", "2025-04-02T08:15:00Z", 1003),
+  scan(822, "cv-1912-25A09-0006", 2, "2025-04-02T03:01:00Z", "2025-04-02T08:15:00Z", 1003),
+  // Order 1004 — harvested 2025-04-06, checked out same day 08:30Z
+  scan(823, "og-9024-25B09-0001", 1, "2025-04-06T03:21:00Z", "2025-04-06T08:30:00Z", 1004),
+  scan(824, "og-9024-25B09-0002", 1, "2025-04-06T03:21:30Z", "2025-04-06T08:30:00Z", 1004),
+  scan(825, "og-9024-25B09-0003", 1, "2025-04-06T03:22:00Z", "2025-04-06T08:30:00Z", 1004),
+  scan(826, "og-9024-25B09-0004", 1, "2025-04-06T03:22:30Z", "2025-04-06T08:30:00Z", 1004),
+  scan(827, "cv-1905-25A09-0001", 3, "2025-04-06T03:24:00Z", "2025-04-06T08:30:00Z", 1004),
+  scan(828, "cv-1905-25A09-0002", 3, "2025-04-06T03:24:30Z", "2025-04-06T08:30:00Z", 1004),
+  scan(829, "cv-1905-25A09-0003", 3, "2025-04-06T03:25:00Z", "2025-04-06T08:30:00Z", 1004),
+  scan(830, "cv-1943-25A09-0003", 7, "2025-04-06T03:27:00Z", "2025-04-06T08:30:00Z", 1004),
+  scan(831, "cv-1943-25A09-0004", 7, "2025-04-06T03:27:30Z", "2025-04-06T08:30:00Z", 1004),
+  // Order 1005 — harvested 2025-04-07, checked out same day 08:45Z
+  scan(832, "og-1974-25B09-0001", 4, "2025-04-07T03:51:00Z", "2025-04-07T08:45:00Z", 1005),
+  scan(833, "og-1974-25B09-0002", 4, "2025-04-07T03:51:30Z", "2025-04-07T08:45:00Z", 1005),
+  scan(834, "og-1974-25B09-0003", 4, "2025-04-07T03:52:00Z", "2025-04-07T08:45:00Z", 1005),
+  scan(835, "og-1974-25B09-0004", 4, "2025-04-07T03:52:30Z", "2025-04-07T08:45:00Z", 1005, { overridden: true, addedInFulfillment: true }),
+  scan(836, "og-1936-25A09-0001", 6, "2025-04-07T03:55:00Z", "2025-04-07T08:45:00Z", 1005),
+  scan(837, "og-1936-25A09-0002", 6, "2025-04-07T03:55:30Z", "2025-04-07T08:45:00Z", 1005),
+  scan(838, "og-1936-25A09-0003", 6, "2025-04-07T03:56:00Z", "2025-04-07T08:45:00Z", 1005),
+  // Order 1006 — harvested 2025-04-13, still in cooler (checkout NULL)
+  scan(839, "og-9024-25A10-0001", 1, "2025-04-13T04:01:00Z", null, 1006),
+  scan(840, "og-9024-25A10-0002", 1, "2025-04-13T04:01:30Z", null, 1006),
+  scan(841, "og-9024-25A10-0003", 1, "2025-04-13T04:02:00Z", null, 1006),
+  scan(842, "og-9024-25A10-0004", 1, "2025-04-13T04:02:30Z", null, 1006),
+  scan(843, "og-9024-25A10-0005", 1, "2025-04-13T04:03:00Z", null, 1006),
+  scan(844, "cv-1912-25A10-0001", 2, "2025-04-13T04:05:00Z", null, 1006),
+  scan(845, "cv-1912-25A10-0002", 2, "2025-04-13T04:05:30Z", null, 1006),
+  scan(846, "cv-1912-25A10-0003", 2, "2025-04-13T04:06:00Z", null, 1006),
+  scan(847, "cv-1912-25A10-0004", 2, "2025-04-13T04:06:30Z", null, 1006),
+  scan(848, "cv-1943-25A10-0001", 7, "2025-04-13T04:08:00Z", null, 1006),
+  scan(849, "cv-1943-25A10-0002", 7, "2025-04-13T04:08:30Z", null, 1006),
+  scan(850, "cv-1943-25A10-0003", 7, "2025-04-13T04:09:00Z", null, 1006),
+  // Order 1007 — harvested 2025-04-15 (today), scheduled checkout 2025-04-16 08:00Z
+  scan(851, "og-9024-25A10-0006", 1, "2025-04-15T21:30:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(852, "og-9024-25A10-0007", 1, "2025-04-15T21:30:30Z", "2025-04-16T08:00:00Z", 1007),
+  scan(853, "og-9024-25A10-0008", 1, "2025-04-15T21:31:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(854, "og-9024-25A10-0009", 1, "2025-04-15T21:31:30Z", "2025-04-16T08:00:00Z", 1007),
+  scan(855, "og-9024-25A10-0010", 1, "2025-04-15T21:32:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(856, "og-9024-25A10-0011", 1, "2025-04-15T21:32:30Z", "2025-04-16T08:00:00Z", 1007),
+  scan(857, "og-9024-25A10-0012", 1, "2025-04-15T21:33:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(858, "og-9024-25A10-0013", 1, "2025-04-15T21:33:30Z", "2025-04-16T08:00:00Z", 1007),
+  scan(859, "cv-1905-25A10-0001", 3, "2025-04-15T21:36:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(860, "cv-1905-25A10-0002", 3, "2025-04-15T21:36:30Z", "2025-04-16T08:00:00Z", 1007),
+  scan(861, "cv-1905-25A10-0003", 3, "2025-04-15T21:37:00Z", "2025-04-16T08:00:00Z", 1007),
+  scan(862, "cv-1905-25A10-0004", 3, "2025-04-15T21:37:30Z", "2025-04-16T08:00:00Z", 1007),
 ];
 
 export const carriers: Carrier[] = [
@@ -149,17 +230,20 @@ export function getAllEnrichedOrders(): EnrichedOrder[] {
 
 export function getInventoryAvailability(): InventoryAvailability[] {
   const openOrders = getOpenOrders();
+  const today = DEMO_TODAY; // YYYY-MM-DD (UTC)
 
   return products.map((product) => {
-    const freshTrays = harvestLogs
-      .filter((h) => h.productId === product.id && h.source === "fresh")
-      .reduce((sum, h) => sum + h.quantityTrays, 0);
+    const productScans = inventoryScans.filter((s) => s.productId === product.id);
 
-    const coolerTrays = harvestLogs
-      .filter((h) => h.productId === product.id && h.source === "cooler")
-      .reduce((sum, h) => sum + h.quantityTrays, 0);
+    // Today's harvest: any scan whose UTC calendar day equals DEMO_TODAY.
+    const freshCases = productScans.filter((s) => s.scannedAt.slice(0, 10) === today).length;
 
-    const totalAvailable = freshTrays + coolerTrays;
+    // Cooler: scanned before today AND not yet checked out.
+    const coolerCases = productScans.filter(
+      (s) => s.checkoutAt === null && s.scannedAt.slice(0, 10) < today,
+    ).length;
+
+    const totalAvailable = freshCases + coolerCases;
 
     const totalCommitted = openOrders.reduce((sum, order) => {
       const item = order.items.find((i) => i.productId === product.id);
@@ -168,8 +252,8 @@ export function getInventoryAvailability(): InventoryAvailability[] {
 
     return {
       product,
-      freshTrays,
-      coolerTrays,
+      freshCases,
+      coolerCases,
       totalAvailable,
       totalCommitted,
       gap: totalAvailable - totalCommitted,

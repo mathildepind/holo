@@ -34,12 +34,17 @@ export type OrderItem = {
   discount: number;
 };
 
-export type HarvestLog = {
+export type InventoryScan = {
   id: number;
+  scanCode: string;
   productId: number;
-  harvestDate: string;
-  quantityTrays: number;
-  source: "fresh" | "cooler";
+  scannedAt: string;
+  checkoutAt: string | null;
+  customerOrderId: number | null;
+  isProduction: boolean;
+  isDonation: boolean;
+  isCheckoutOverridden: boolean;
+  isAddedInFulfillment: boolean;
 };
 
 export type PackRecord = {
@@ -104,8 +109,8 @@ export type EnrichedBOL = BillOfLading & {
 
 export type InventoryAvailability = {
   product: Product;
-  freshTrays: number;
-  coolerTrays: number;
+  freshCases: number;
+  coolerCases: number;
   totalAvailable: number;
   totalCommitted: number;
   gap: number; // negative = short

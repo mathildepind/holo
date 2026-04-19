@@ -222,6 +222,16 @@ export function getAllEnrichedOrders(): EnrichedOrder[] {
 export function getInventoryAvailability(): InventoryAvailability[] {
   const openOrders = getOpenOrders();
   const today = DEMO_TODAY; // YYYY-MM-DD (UTC)
+  const tomorrow = addDaysISO(today, 1);
+
+  const todayOrders = openOrders.filter((o) => o.requestedDelivery === today);
+  const tomorrowOrders = openOrders.filter((o) => o.requestedDelivery === tomorrow);
+
+  const sumFor = (orders: EnrichedOrder[], productId: number) =>
+    orders.reduce((sum, order) => {
+      const item = order.items.find((i) => i.productId === productId);
+      return sum + (item?.quantityOrdered ?? 0);
+    }, 0);
 
   return products.map((product) => {
     const productScans = inventoryScans.filter((s) => s.productId === product.id);
@@ -235,19 +245,17 @@ export function getInventoryAvailability(): InventoryAvailability[] {
     ).length;
 
     const totalAvailable = freshCases + coolerCases;
-
-    const totalCommitted = openOrders.reduce((sum, order) => {
-      const item = order.items.find((i) => i.productId === product.id);
-      return sum + (item?.quantityOrdered ?? 0);
-    }, 0);
+    const committedToday = sumFor(todayOrders, product.id);
+    const committedTomorrow = sumFor(tomorrowOrders, product.id);
 
     return {
       product,
       freshCases,
       coolerCases,
       totalAvailable,
-      totalCommitted,
-      gap: totalAvailable - totalCommitted,
+      committedToday,
+      committedTomorrow,
+      gap: totalAvailable - committedToday,
     };
   });
 }

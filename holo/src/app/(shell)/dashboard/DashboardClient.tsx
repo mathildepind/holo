@@ -14,6 +14,9 @@ function GapBadge({ gap }: { gap: number }) {
       </span>
     );
   }
+  if (gap === 0) {
+    return <span className="num-warn">0</span>;
+  }
   if (gap < 10) {
     return <span className="num-warn">+{gap}</span>;
   }
@@ -53,7 +56,7 @@ export default function DashboardClient() {
   const shortProducts = inventory.filter((i) => i.gap < 0);
   const lowProducts = inventory.filter((i) => i.gap >= 0 && i.gap < 10);
   const totalCases = inventory.reduce((s, i) => s + i.totalAvailable, 0);
-  const totalCommitted = inventory.reduce((s, i) => s + i.totalCommitted, 0);
+  const totalCommitted = inventory.reduce((s, i) => s + i.committedToday + i.committedTomorrow, 0);
 
   return (
     <div className="page-container fade-in" style={{ maxWidth: 1260 }}>
@@ -160,15 +163,16 @@ export default function DashboardClient() {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Today&apos;s harvest</th>
+                <th>Today&apos;s<br />harvest</th>
                 <th>Cooler</th>
                 <th>Total</th>
-                <th>Committed</th>
-                <th>Gap</th>
+                <th>Committed<br />today</th>
+                <th>Committed<br />tomorrow</th>
+                <th>Gap<br />today</th>
               </tr>
             </thead>
             <tbody>
-              {inventory.map(({ product, freshCases, coolerCases, totalAvailable, totalCommitted: committed, gap }) => (
+              {inventory.map(({ product, freshCases, coolerCases, totalAvailable, committedToday, committedTomorrow, gap }) => (
                 <tr key={product.id}>
                   <td>
                     <div style={{ fontWeight: 500, color: "var(--text)" }}>{product.name}</div>
@@ -177,7 +181,8 @@ export default function DashboardClient() {
                   <td className="num-ok">{freshCases}</td>
                   <td style={{ color: "var(--text-muted)" }}>{coolerCases}</td>
                   <td style={{ fontWeight: 500 }}>{totalAvailable}</td>
-                  <td style={{ color: "var(--text-muted)" }}>{committed}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{committedToday}</td>
+                  <td style={{ color: "var(--text-muted)" }}>{committedTomorrow}</td>
                   <td>
                     <GapBadge gap={gap} />
                   </td>
@@ -186,7 +191,7 @@ export default function DashboardClient() {
             </tbody>
           </table>
           <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", fontSize: 10, color: "var(--text-dim)" }}>
-            {"Today's harvest = cases scanned today · Cooler = cases with no checkout scan"}
+            {"Gap today = Total − Committed today · Tomorrow's commitments will be covered by tomorrow's harvest"}
           </div>
         </div>
 

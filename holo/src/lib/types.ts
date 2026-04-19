@@ -112,6 +112,7 @@ export type InventoryAvailability = {
   freshCases: number;
   coolerCases: number;
   totalAvailable: number;
-  totalCommitted: number;
-  gap: number; // negative = short
+  committedToday: number;
+  committedTomorrow: number;
+  gap: number; // totalAvailable - committedToday; negative = short for today's shipments
 };

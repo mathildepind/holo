@@ -15,6 +15,8 @@ The core principle: **every entity that is currently a free-text field, a Google
 
 ```mermaid
 erDiagram
+    CUSTOMERS ||--o{ CUSTOMER_LOCATIONS : "has"
+    CUSTOMER_LOCATIONS ||--o{ SALES_ORDERS : "delivers to"
     CUSTOMERS ||--o{ SALES_ORDERS : places
     SALES_ORDERS ||--o{ ORDER_ITEMS : "has line items"
     PRODUCTS ||--o{ ORDER_ITEMS : "ordered as"
@@ -23,6 +25,7 @@ erDiagram
     PRODUCTS ||--o{ PACK_ITEMS : "packed as"
     SALES_ORDERS ||--|| PACK_RECORDS : "verified by"
     PACK_RECORDS ||--o{ PACK_ITEMS : "contains"
+    ORDER_ITEMS ||--o{ PACK_ITEMS : "fulfilled by"
     PACK_ITEMS ||--o{ INVENTORY_SCANS : "assigns"
     PACK_RECORDS ||--|| BILLS_OF_LADING : "generates"
     SHIPMENTS ||--o{ BILLS_OF_LADING : "carries"
@@ -31,7 +34,11 @@ erDiagram
     CUSTOMERS {
         int id PK
         string name
-        string location
+    }
+    CUSTOMER_LOCATIONS {
+        int id PK
+        int customer_id FK
+        string name
         string address
     }
     PRODUCTS {
@@ -40,11 +47,13 @@ erDiagram
         string name
         string pack_size
         decimal unit_price
+        decimal case_weight_lb
         string scan_prefix
     }
     SALES_ORDERS {
         int id PK
         int customer_id FK
+        int delivery_location_id FK
         string po_number
         date requested_delivery
         date planned_ship
@@ -70,11 +79,14 @@ erDiagram
         int id PK
         string scan_code
         int product_id FK
+        string batch_code
         int pack_item_id FK "nullable"
         timestamp scanned_at
         timestamp checkout_at "nullable"
         boolean is_production
         boolean is_donation
+        boolean is_checkout_overridden
+        boolean is_added_in_fulfillment
     }
     PACK_RECORDS {
         int id PK
@@ -87,8 +99,10 @@ erDiagram
     PACK_ITEMS {
         int id PK
         int pack_record_id FK
+        int order_item_id FK "nullable"
         int product_id FK
         int quantity_packed
+        int substituted_for_order_item_id FK "nullable"
         text discrepancy_note "nullable"
     }
     BILLS_OF_LADING {
@@ -125,16 +139,29 @@ The diagram maps the traceability chain described below: a harvested tray become
 
 ### CUSTOMERS
 
-Replaces the redundant `customer` / `retailer` free-text columns on every order. Single source of truth for customer identity and delivery locations.
+Replaces the redundant `customer` / `retailer` free-text columns on every order. Single source of truth for customer identity.
 
 | Field | Type | Notes |
 |-------|------|-------|
 | id | int, PK | |
 | name | string | e.g., "Bay Leaf Markets" |
-| location | string | e.g., "Bay Leaf - Palo Alto" |
-| address | string | Full delivery address |
 
 **Why this is new:** The current schema stores customer name, retailer name, and location as free text on every order row — all three are identical in every record. Normalizing to a customers table eliminates redundancy and makes it possible to update a customer's details in one place.
+
+---
+
+### CUSTOMER_LOCATIONS
+
+Separate table because a customer can have multiple receiving docks (e.g., a regional grocer with stores in several cities). Address belongs to the location, not the customer.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | int, PK | |
+| customer_id | int, FK → CUSTOMERS | |
+| name | string | e.g., "Bay Leaf - Palo Alto" |
+| address | string | Full delivery address |
+
+**Why this is new:** The current schema couples `location` directly to each order as free text. Splitting it out means a second location for the same customer doesn't create a parallel customer row, and `SALES_ORDERS.delivery_location_id` FKs cleanly. In the sample data every customer has one location, but the model should not assume 1:1.
 
 ---
 
@@ -145,13 +172,14 @@ Maps SKU descriptions to scan code prefixes, connecting the inventory and order 
 | Field | Type | Notes |
 |-------|------|-------|
 | id | int, PK | |
-| sku | string | Unique SKU code |
+| sku | string | Internal SKU code from the SKU workbook, e.g., `P006` |
 | name | string | e.g., "Spring Mix" |
 | pack_size | string | e.g., "6 x 4.5 oz" |
 | unit_price | decimal | Default price (can be overridden on order items) |
+| case_weight_lb | decimal | Per-case weight, used to compute `BILLS_OF_LADING.total_weight` |
 | scan_prefix | string | Maps to inventory scan codes, e.g., "og-9024" → Spring Mix |
 
-**Why this is new:** This is the most critical structural gap in the current schema. Today, SKU descriptions exist only as free text on order line items (e.g., "Spring Mix 6 x 4.5 oz"), and inventory scans use encoded scan codes (e.g., `og-9024-25A09-0001`) with no documented mapping to products. The `scan_prefix` field bridges these two systems, enabling traceability from scan to product to order.
+**Why this is new:** This is the most critical structural gap in the current schema. Three independent product identifiers exist today with no table joining them: the internal `P001`–`P007` SKUs in the SKU workbook, the free-text `sku_description` on order line items (e.g., "Spring Mix 6 x 4.5 oz"), and the scan-code prefixes on inventory scans (e.g., `og-9024-25A09-0001`). `products` reconciles all three. The `case_weight_lb` column is what makes `BILLS_OF_LADING.total_weight` computable instead of hardcoded.
 
 ---
 
@@ -163,16 +191,18 @@ Adds explicit status tracking and replaces free-text fields with foreign keys.
 |-------|------|-------|
 | id | int, PK | |
 | customer_id | int, FK → CUSTOMERS | |
+| delivery_location_id | int, FK → CUSTOMER_LOCATIONS | Which dock this order ships to |
 | po_number | string | Customer's purchase order reference |
 | requested_delivery | date | Customer-requested delivery date |
 | planned_ship | date | Internal planned ship date |
-| status | string | `entered` → `fulfilled` → `released` → `delivered` |
+| status | string | `entered` → `fulfilled` ·or· `partially_fulfilled` → `released` → `delivered` · `cancelled` |
 | entered_at | timestamp | When the order was created |
 
 **What changed:**
 - `customer` and `retailer` columns replaced by `customer_id` FK — eliminates redundancy.
+- `location` free-text column replaced by `delivery_location_id` FK → `CUSTOMER_LOCATIONS`.
 - `delivery_date` and `customer_requested_delivery_date` were identical in every record; collapsed to `requested_delivery` and `planned_ship` which have distinct meanings.
-- Explicit `status` field replaces the pattern of inferring order state from which timestamps (`fulfilled_timestamp`, `released_timestamp`, `delivered_timestamp`) are populated. Status transitions are now explicit and queryable.
+- Explicit `status` field replaces the pattern of inferring order state from which timestamps (`fulfilled_timestamp`, `released_timestamp`, `delivered_timestamp`) are populated. Status transitions are now explicit and queryable. `partially_fulfilled` covers the real case seen in the sample data where the packed quantity is less than the ordered quantity (order 1003 shipped 5 of 6 Spring Mix); `cancelled` gives the state machine a terminal off-ramp.
 - `order_type_selector` removed — all records were "Purchase Order."
 - `bol_photo_url` removed — BOLs are now structured records, not photos.
 - `load_id` free-text field replaced by the SHIPMENTS / BILLS_OF_LADING relationship.
@@ -224,16 +254,20 @@ Individual case/tray scans. Now linked to products and (after packing) to specif
 | id | int, PK | |
 | scan_code | string | Full barcode, e.g., `og-9024-25A09-0001` |
 | product_id | int, FK → PRODUCTS | Derived from scan code prefix via products.scan_prefix |
+| batch_code | string | Middle segment of scan code (e.g., `25A09`) identifying the harvest batch |
 | pack_item_id | int, FK → PACK_ITEMS, nullable | Set when this scan is assigned to a packed line item |
 | scanned_at | timestamp | When the case was scanned off the line |
 | checkout_at | timestamp, nullable | When the case was checked out for an order |
 | is_production | boolean | |
 | is_donation | boolean | |
+| is_checkout_overridden | boolean | Operator scanned this case against a different order than the system expected |
+| is_added_in_fulfillment | boolean | Ad-hoc case added at the pack table (not pre-allocated from the order) |
 
 **What changed:**
 - `customer_order_id` and `customer_order_item_id` replaced by `pack_item_id`. The current schema links scans to orders but never to specific line items (the `customer_order_item_id` column is empty in every record). The new model links scans to pack items, which in turn link to products — completing the traceability chain.
 - `product_id` added — derived from scan code prefix lookup, making it possible to aggregate scanned inventory by product.
-- `is_checkout_overridden` and `is_added_in_fulfillment` removed — these exception flags are better captured as notes on the pack record.
+- `batch_code` added — parsed from the middle segment of the scan code. Food-safety recalls operate on harvest batches, so this needs to be a first-class column (not buried inside `scan_code`). Optional follow-up: a `HARVEST_BATCHES` table keyed by `batch_code` for aggregate batch metadata.
+- `is_checkout_overridden` and `is_added_in_fulfillment` kept as per-scan booleans. Collapsing them into a pack-record note would destroy per-case signal — and scan 835 in the sample data has both set, so this is a real operational case that the model has to preserve.
 
 ---
 
@@ -262,11 +296,15 @@ Individual line items within a pack record — what was actually packed per prod
 |-------|------|-------|
 | id | int, PK | |
 | pack_record_id | int, FK → PACK_RECORDS | |
+| order_item_id | int, FK → ORDER_ITEMS, nullable | The order line this pack item fulfills; null for ad-hoc adds |
 | product_id | int, FK → PRODUCTS | |
 | quantity_packed | int | Actual number of cases packed |
+| substituted_for_order_item_id | int, FK → ORDER_ITEMS, nullable | If this is a substitute for a different ordered product, points to the original line |
 | discrepancy_note | text, nullable | e.g., "Short 2 cases — quality pull", "Customer approved substitution" |
 
-**Why this is new:** This is where the order-vs-reality comparison happens. By joining `PACK_ITEMS.product_id` and `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.product_id` and `ORDER_ITEMS.quantity_ordered` for the same order, the system can flag discrepancies before the BOL is generated — catching mismatches that currently aren't discovered until invoicing.
+**Why this is new:** This is where the order-vs-reality comparison happens. By joining `PACK_ITEMS.order_item_id` against `ORDER_ITEMS.quantity_ordered`, the system can flag discrepancies before the BOL is generated — catching mismatches that currently aren't discovered until invoicing.
+
+The `order_item_id` FK is necessary because an order can have two line items for the same product (different unit prices, different allocations) — matching on `product_id` alone is ambiguous. `substituted_for_order_item_id` makes substitutions structured instead of buried in the free-text `discrepancy_note`, which means substitution reporting becomes a simple query.
 
 ---
 
@@ -281,7 +319,7 @@ Generated from verified pack data. Replaces the Google Doc template and photo-ba
 | pack_record_id | int, FK → PACK_RECORDS | Links BOL to verified pack data |
 | shipment_id | int, FK → SHIPMENTS | |
 | pallet_count | int | |
-| total_weight | decimal | |
+| total_weight | decimal | Computed at generation from `Σ(pack_items.quantity_packed × products.case_weight_lb)` |
 | temp_requirements | string | e.g., "34–38°F" |
 | generated_by | string | Who generated the BOL |
 | generated_at | timestamp | |
@@ -324,11 +362,11 @@ Lookup table for carriers.
 ### Harvest → Pack → Ship → Invoice
 
 1. Robots harvest overnight. **HARVEST_LOGS** records trays by product and date.
-2. Individual cases are scanned off the line → **INVENTORY_SCANS** with `product_id` derived from scan code prefix.
+2. Individual cases are scanned off the line → **INVENTORY_SCANS** with `product_id` derived from scan code prefix and `batch_code` parsed from the middle segment.
 3. Operations manager views the **Inventory & Orders Dashboard**: harvest logs + unassigned scans vs. open order items. Sees gaps at a glance.
 4. During packing, a **PACK_RECORD** is created for the order. **PACK_ITEMS** log what was actually packed per product. Scans are linked to pack items via `pack_item_id`.
-5. System compares `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.quantity_ordered` and flags discrepancies.
-6. Once verified, the pack record is locked → **BILL_OF_LADING** is generated from verified data with accurate quantities.
+5. System compares `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.quantity_ordered` (joined via `pack_items.order_item_id`) and flags discrepancies. If the order was short-picked, `SALES_ORDERS.status` becomes `partially_fulfilled`.
+6. Once verified, the pack record is locked → **BILL_OF_LADING** is generated from verified data, with `total_weight` computed from `case_weight_lb × quantity_packed`.
 7. BOL is linked to a **SHIPMENT** with carrier details and delivery tracking.
 8. Business team queries `BILLS_OF_LADING` joined to `PACK_ITEMS` and `ORDER_ITEMS` for invoice reconciliation — no manual cross-referencing needed.
 

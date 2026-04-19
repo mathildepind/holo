@@ -1,16 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { GET } from "./route";
+import { DEMO_TODAY } from "@/lib/mock-data";
+
+function addDaysISO(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 describe("GET /api/orders", () => {
-  it("returns only orders with status 'entered'", async () => {
+  it("returns orders delivering today or tomorrow that are not yet delivered", async () => {
     const res = await GET();
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
     expect(body.length).toBeGreaterThan(0);
+
+    const tomorrow = addDaysISO(DEMO_TODAY, 1);
     for (const order of body) {
-      expect(order.status).toBe("entered");
+      expect([DEMO_TODAY, tomorrow]).toContain(order.requestedDelivery);
+      expect(order.status).not.toBe("delivered");
     }
   });
 

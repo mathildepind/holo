@@ -66,7 +66,7 @@ export default function DashboardClient() {
           Inventory &amp; Orders
         </h1>
         <p style={{ color: "var(--text-muted)", margin: "4px 0 0", fontSize: 12 }}>
-          {"Today's harvest + cooler vs. open orders — Apr 15, 2025"}
+          {"Today's harvest + cooler vs. open orders — Mar 10, 2025"}
         </p>
       </div>
 

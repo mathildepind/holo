@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HOLO
 
-## Getting Started
+Operations UI prototype for Hippo Harvest — a single-screen flow that walks a user from open orders through pack verification to a generated Bill of Lading.
 
-First, run the development server:
+Built as an interview demo. Data is a static in-memory fixture seeded from the case-study CSVs (`customer_orders.csv`, `customer_order_items.csv`, `inventory_scans.csv`) and anchored to a simulated "today" of **2025-03-10, 05:00**.
+
+## Views
+
+- **Dashboard** (`/dashboard`) — today's harvest + cooler inventory vs. committed orders, with a today/tomorrow split and a short-inventory alert.
+- **Pack Verify** (`/pack`) — scan-driven pack verification for open orders; newly packed BOLs persist to `localStorage`.
+- **Order History** (`/orders`) — past orders and their generated BOLs.
+
+## Stack
+
+- Next.js 14 (App Router) + TypeScript + React 18
+- API routes under `src/app/api/{inventory,orders,bols}` serve the fixture data
+- Vitest for route-level tests
+- Plain CSS (no Tailwind runtime) — design tokens live in `src/app/globals.css`
+
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test
+```
 
-## Learn More
+## Key files
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/lib/mock-data.ts` — fixture, CSV-derived seed data, and `getInventoryAvailability` / `getOpenOrders` helpers
+- `src/lib/types.ts` — domain types (orders, pack records, BOLs, inventory)
+- `src/app/(shell)/` — the three UI routes
+- `src/app/api/` — JSON endpoints consumed by the client views

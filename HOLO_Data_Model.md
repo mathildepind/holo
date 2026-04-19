@@ -72,7 +72,6 @@ erDiagram
         int product_id FK
         date harvest_date
         int quantity_trays
-        string source
     }
     INVENTORY_SCANS {
         int id PK
@@ -229,7 +228,7 @@ Line items for a sales order. Now references products by ID instead of storing f
 
 ### HARVEST_LOGS
 
-Records what was harvested each day, by product and source.
+Records what was harvested each day, by product.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -237,9 +236,8 @@ Records what was harvested each day, by product and source.
 | product_id | int, FK → PRODUCTS | |
 | harvest_date | date | |
 | quantity_trays | int | Number of trays harvested |
-| source | string | `fresh` or `cooler` |
 
-**Why this is new:** Harvest data currently lives in Google Chat messages and spreadsheets. Structuring it enables the Inventory & Orders Dashboard — the "one place to see what's been harvested, what's committed, and what still needs packing" that Maria asked for.
+**Why this is new:** Harvest data currently lives in Google Chat messages and spreadsheets. Structuring it enables the Inventory & Orders Dashboard — the "one place to see what's been harvested, what's committed, and what still needs packing" that Maria asked for. Cold-chain state (fresh vs cooler) is **not** captured here — it's derived from `INVENTORY_SCANS.checkout_at IS NULL` per the case study's own definition of cooler stock.
 
 ---
 
@@ -255,7 +253,7 @@ Individual case/tray scans. Now linked to products and (after packing) to specif
 | batch_code | string | Middle segment of scan code (e.g., `25A09`) identifying the harvest batch |
 | pack_item_id | int, FK → PACK_ITEMS, nullable | Set when this scan is assigned to a packed line item |
 | scanned_at | timestamp | When the case was scanned off the line |
-| checkout_at | timestamp, nullable | When the case was checked out for an order |
+| checkout_at | timestamp, nullable | When the case was released to the truck. **Null = still in cooler** (per the case study's definition). |
 | is_production | boolean | |
 | is_donation | boolean | |
 | is_checkout_overridden | boolean | Operator scanned this case against a different order than the system expected |
@@ -361,7 +359,7 @@ Lookup table for carriers.
 
 1. Robots harvest overnight. **HARVEST_LOGS** records trays by product and date.
 2. Individual cases are scanned off the line → **INVENTORY_SCANS** with `product_id` derived from scan code prefix and `batch_code` parsed from the middle segment.
-3. Operations manager views the **Inventory & Orders Dashboard**: harvest logs + unassigned scans vs. open order items. Sees gaps at a glance.
+3. Operations manager views the **Inventory & Orders Dashboard**. Cooler stock = count of `INVENTORY_SCANS` where `checkout_at IS NULL`. Harvested-today is derived from `HARVEST_LOGS`. Committed = open `ORDER_ITEMS.quantity_ordered`. Gap = on-hand − committed.
 4. During packing, a **PACK_RECORD** is created for the order. **PACK_ITEMS** log what was actually packed per product. Scans are linked to pack items via `pack_item_id`.
 5. System compares `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.quantity_ordered` (joined via `pack_items.order_item_id`) and flags discrepancies. If the order was short-picked, `SALES_ORDERS.status` becomes `partially_fulfilled`.
 6. Once verified, the pack record is locked → **BILL_OF_LADING** is generated from verified data, with `total_weight` computed from `case_weight_lb × quantity_packed`.
@@ -386,7 +384,7 @@ The model is derivable from the three sample CSVs.
 |---|---|---|
 | `customer_orders.csv` | 10 | Populates `SALES_ORDERS`, `CUSTOMERS`, `CUSTOMER_LOCATIONS`; `load_id` → `SHIPMENTS` |
 | `customer_order_items.csv` | 24 | Populates `ORDER_ITEMS`; `sku_description` seeds `PRODUCTS.name + pack_size` |
-| `inventory_scans.csv` | 62 | Populates `INVENTORY_SCANS`; scan-code prefix seeds `PRODUCTS.scan_prefix` |
+| `inventory_scans.csv` | 62 | Populates `INVENTORY_SCANS`; scan-code prefix seeds `PRODUCTS.scan_prefix`; rows with `checkout_timestamp IS NULL` are cooler stock on the dashboard |
 
 Products exist under two independent identifiers in the source data, and `PRODUCTS` is where they converge:
 

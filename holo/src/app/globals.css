@@ -1,6 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @tailwind base;
 @tailwind components;
@@ -23,27 +21,6 @@
   --red: #b83232;
   --red-dim: rgba(184,50,50,0.08);
   --blue: #1a6a85;
-
-  /* shadcn overrides */
-  --background: oklch(0.96 0.01 145);
-  --foreground: oklch(0.18 0.03 145);
-  --card: oklch(0.99 0.005 145);
-  --card-foreground: oklch(0.18 0.03 145);
-  --popover: oklch(0.99 0.005 145);
-  --popover-foreground: oklch(0.18 0.03 145);
-  --primary: oklch(0.50 0.14 150);
-  --primary-foreground: oklch(0.99 0.005 145);
-  --secondary: oklch(0.94 0.01 145);
-  --secondary-foreground: oklch(0.18 0.03 145);
-  --muted: oklch(0.94 0.01 145);
-  --muted-foreground: oklch(0.42 0.04 145);
-  --accent: oklch(0.92 0.01 145);
-  --accent-foreground: oklch(0.18 0.03 145);
-  --destructive: oklch(0.50 0.18 25);
-  --border-shadcn: oklch(0.84 0.02 145);
-  --input: oklch(0.94 0.01 145);
-  --ring: oklch(0.50 0.14 150);
-  --radius: 0.25rem;
 }
 
 * { box-sizing: border-box; }

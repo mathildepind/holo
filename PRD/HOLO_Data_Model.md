@@ -18,19 +18,18 @@ This document describes the target data model. The v1 prototype (in `/holo`) imp
 **Collapsed for v1:**
 - `CUSTOMERS` + `CUSTOMER_LOCATIONS` are merged into a single flat customer record (`name`, `location`, `address`). Stands in until Question 1 is confirmed. If a customer ever needs a second delivery location, the split is reinstated.
 
-**Added in v1 but not yet in the model:**
-- `PRODUCTS.sku` — a human-readable product code (e.g. `SM-645`) used in the UI and in API responses. Worth promoting to the model alongside `scan_prefix`.
-
 **Fields omitted from v1 (kept on the target model):**
-- `SALES_ORDERS.status` — v1 carries only `entered → fulfilled → released → delivered`. The `partially_fulfilled` and `cancelled` states are specified but not yet exercised by the prototype.
+- `SALES_ORDERS.status` — v1 carries only `entered → fulfilled → released → delivered`. The `partially_fulfilled` and `cancelled` states are specified but not yet exercised by the prototype. The `entered → fulfilled` transition happens automatically when a pack record is locked.
 - `SALES_ORDERS.delivery_location_id` — omitted, follows from the customer/location collapse above.
 - `PACK_ITEMS.order_item_id` — v1 matches pack items to order items on `product_id` alone. Adequate for the sample data (no duplicate-product line items), but the model keeps the FK for the general case.
 - `PACK_ITEMS.substituted_for_order_item_id` — no substitution flow in v1.
+- `PACK_RECORDS.status` — the target `draft → verified → locked` lifecycle collapses in v1: `createPackAndBOL` writes `locked` directly in the same transaction that creates the pack items and BOL. Intermediate states would become meaningful once the pack-verify UI supports save-as-draft.
 
 **Tables not yet implemented:**
 - `HARVEST_LOGS` — v1 derives the dashboard's today's-harvest count from `INVENTORY_SCANS.scanned_at` directly. This works while harvest-to-scan is 1:1 on the demo data. The tray-level log is retained in the model because Maria's use case ("how many trays came off overnight?") is grounded in trays, not scanned cases.
 
 **Landed since the first draft of this doc:**
+- `PRODUCTS.sku` — a human-readable product code (e.g. `SM-645`) used in the UI and in API responses. First-class alongside `scan_prefix`.
 - `INVENTORY_SCANS.pack_item_id` and `INVENTORY_SCANS.batch_code` are now first-class columns. Historical scans in the seed are linked to their pack items, and batch codes (`25A09`, `25B09`) are parsed from the scan code.
 - `PRODUCTS.case_weight_lb` is present; `BILLS_OF_LADING.total_weight` is computed from `Σ(quantity_packed × case_weight_lb)` rather than hardcoded.
 
@@ -70,6 +69,7 @@ erDiagram
     }
     PRODUCTS {
         int id PK
+        string sku UK
         string name
         string pack_size
         decimal unit_price
@@ -170,8 +170,12 @@ Replaces the redundant `customer` / `retailer` free-text columns on every order.
 |-------|------|-------|
 | id | int, PK | |
 | name | string | e.g., "Bay Leaf Markets" |
+| location | string | v1 only: e.g., "Bay Leaf - Palo Alto". In the target model this moves to `CUSTOMER_LOCATIONS.name`. |
+| address | string | v1 only: full delivery address. Moves to `CUSTOMER_LOCATIONS.address` in the target model. |
 
 **Why this is new:** The current schema stores customer name, retailer name, and location as free text on every order row — all three are identical in every record. Normalizing to a customers table eliminates redundancy and makes it possible to update a customer's details in one place.
+
+**v1 note:** Until Question 1 is confirmed, the prototype carries `location` and `address` directly on `CUSTOMERS` instead of splitting them into `CUSTOMER_LOCATIONS`. If a customer ever needs a second receiving dock, the split is reinstated.
 
 ---
 
@@ -197,13 +201,14 @@ Maps product descriptions to scan code prefixes, connecting the inventory and or
 | Field | Type | Notes |
 |-------|------|-------|
 | id | int, PK | |
+| sku | string, unique | Human-readable product code, e.g., "SM-645" |
 | name | string | e.g., "Spring Mix" |
 | pack_size | string | e.g., "6 x 4.5 oz" |
 | unit_price | decimal | Default price (can be overridden on order items) |
 | case_weight_lb | decimal | Per-case weight, used to compute `BILLS_OF_LADING.total_weight` |
 | scan_prefix | string | Maps to inventory scan codes, e.g., "og-9024" → Spring Mix |
 
-**Why this is new:** This is the most critical structural gap in the current schema. Two independent product identifiers exist today with no table joining them: the free-text `sku_description` on order line items (e.g., "Spring Mix 6 x 4.5 oz") and the scan-code prefixes on inventory scans (e.g., `og-9024-25A09-0001`). `products` reconciles the two so scans and order lines can be joined to a single record. The `case_weight_lb` column is what makes `BILLS_OF_LADING.total_weight` computable instead of hardcoded.
+**Why this is new:** This is the most critical structural gap in the current schema. Two independent product identifiers exist today with no table joining them: the free-text `sku_description` on order line items (e.g., "Spring Mix 6 x 4.5 oz") and the scan-code prefixes on inventory scans (e.g., `og-9024-25A09-0001`). `products` reconciles the two so scans and order lines can be joined to a single record. The `case_weight_lb` column is what makes `BILLS_OF_LADING.total_weight` computable instead of hardcoded. `sku` is carried as a unique, stable human-readable code for UI and API display.
 
 ---
 
@@ -309,6 +314,8 @@ The verification layer — one record per order packing session. This is the cor
 
 **Why this is new:** There is currently no record of what was actually packed for an order. The `fulfilled_timestamp` on the order indicates packing happened, but not what was packed, whether it matched the order, who verified it, or whether there were any issues. This table closes that gap.
 
+**v1 note:** `createPackAndBOL` writes `status = locked` directly, in the same transaction that inserts pack items, the shipment, and the BOL — and simultaneously moves `SALES_ORDERS.status` from `entered` to `fulfilled`. The intermediate `draft` and `verified` states are reserved for a future save-as-you-go pack-verify UI.
+
 ---
 
 ### PACK_ITEMS
@@ -384,12 +391,12 @@ Lookup table for carriers.
 
 ### Harvest → Pack → Ship → Invoice
 
-1. Robots harvest overnight. **HARVEST_LOGS** records trays by product and date.
+1. Robots harvest overnight. In the target model, **HARVEST_LOGS** records trays by product and date; v1 infers the same signal from the first `INVENTORY_SCANS` rows of each day.
 2. Individual cases are scanned off the line → **INVENTORY_SCANS** with `product_id` derived from scan code prefix and `batch_code` parsed from the middle segment.
-3. Operations manager views the **Inventory & Orders Dashboard**. Cooler stock = count of `INVENTORY_SCANS` where `checkout_at IS NULL`. Harvested-today is derived from `HARVEST_LOGS`. Committed = open `ORDER_ITEMS.quantity_ordered`. Gap = on-hand − committed.
+3. Operations manager views the **Inventory & Orders Dashboard**. Cooler stock = count of `INVENTORY_SCANS` where `checkout_at IS NULL` and `scanned_at` is before today. Harvested-today = `INVENTORY_SCANS` where `scanned_at` is today. Committed = open `ORDER_ITEMS.quantity_ordered`. Gap = on-hand − committed.
 4. During packing, a **PACK_RECORD** is created for the order. **PACK_ITEMS** log what was actually packed per product. Scans are linked to pack items via `pack_item_id`.
-5. System compares `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.quantity_ordered` (joined via `pack_items.order_item_id`) and flags discrepancies. If the order was short-picked, `SALES_ORDERS.status` becomes `partially_fulfilled`.
-6. Once verified, the pack record is locked → **BILL_OF_LADING** is generated from verified data, with `total_weight` computed from `case_weight_lb × quantity_packed`.
+5. System compares `PACK_ITEMS.quantity_packed` against `ORDER_ITEMS.quantity_ordered` and flags discrepancies at pack-verify time (join on `product_id` in v1, on `order_item_id` in the target). Once the user locks the record, the pack record, pack items, shipment, and BOL are written in a single transaction — and `SALES_ORDERS.status` moves from `entered` to `fulfilled`. The target model keeps `partially_fulfilled` as a terminal state for short-picks; v1 does not yet exercise it.
+6. The **BILL_OF_LADING** is generated from the verified pack data at lock time, with `total_weight` computed from `Σ(case_weight_lb × quantity_packed)`.
 7. BOL is linked to a **SHIPMENT** with carrier details and delivery tracking.
 8. Business team queries `BILLS_OF_LADING` joined to `PACK_ITEMS` and `ORDER_ITEMS` for invoice reconciliation — no manual cross-referencing needed.
 

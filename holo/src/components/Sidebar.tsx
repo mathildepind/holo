@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, PackageCheck, ClipboardList } from "lucide-react";
-import { DEMO_TODAY } from "@/lib/mock-data";
+import { DEMO_TODAY } from "@/lib/demo-config";
 
 const nav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },

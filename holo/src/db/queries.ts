@@ -1,11 +1,12 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { DEMO_TODAY, addDaysISO } from "@/lib/demo-config";
 import * as schema from "./schema";
 import {
   billsOfLading,
   carriers,
   customers,
-  harvestLogs,
+  inventoryScans,
   orderItems,
   packItems,
   packRecords,
@@ -60,17 +61,27 @@ export function getAllEnrichedOrders(db: DB) {
   return db.query.salesOrders.findMany({ with: enrichedOrderWith }).sync();
 }
 
+// Open orders for the dashboard: deliveries scheduled for today or tomorrow
+// that have not already been delivered. "Today" is DEMO_TODAY for the demo.
 export function getOpenOrders(db: DB) {
+  const tomorrow = addDaysISO(DEMO_TODAY, 1);
   return db.query.salesOrders
     .findMany({
-      where: eq(salesOrders.status, "entered"),
+      where: and(
+        inArray(salesOrders.requestedDelivery, [DEMO_TODAY, tomorrow]),
+        sql`${salesOrders.status} != 'delivered'`,
+      ),
       with: enrichedOrderWith,
     })
     .sync();
 }
 
+// Default pack-verify moment: 05:00 UTC on DEMO_TODAY — matches the sidebar
+// clock so BOL numbers stay in the same year as the seed data.
+const DEMO_NOW = new Date(`${DEMO_TODAY}T05:00:00Z`);
+
 export function createPackAndBOL(db: DB, input: CreatePackInput) {
-  const when = input.now ?? new Date();
+  const when = input.now ?? DEMO_NOW;
   const nowIso = when.toISOString();
   const packedBy = input.packedBy ?? "L. Greens";
 
@@ -140,8 +151,13 @@ export function createPackAndBOL(db: DB, input: CreatePackInput) {
     const year = when.getUTCFullYear();
     const bolNumber = `BOL-${year}-${String(seq).padStart(4, "0")}`;
 
+    const productRows = tx.select().from(products).all();
+    const weightByProduct = new Map(productRows.map((p) => [p.id, p.caseWeightLb]));
     const totalWeight = Math.round(
-      input.draftItems.reduce((s, d) => s + d.quantityPacked * 2.5, 0)
+      input.draftItems.reduce(
+        (s, d) => s + d.quantityPacked * (weightByProduct.get(d.productId) ?? 2.5),
+        0,
+      ),
     );
     const palletCount = Math.max(1, Math.ceil(totalWeight / 400));
 
@@ -185,46 +201,80 @@ export function getEnrichedBOLs(db: DB) {
     .sync();
 }
 
+// Availability = (today's harvest scans) + (cooler: older scans not checked out).
+// Committed is split today vs. tomorrow so the dashboard can show that tomorrow's
+// commitments will be covered by tomorrow's harvest. Gap is today-only.
 export function getInventoryAvailability(db: DB) {
+  const today = DEMO_TODAY;
+  const tomorrow = addDaysISO(today, 1);
   const allProducts = db.select().from(products).all();
 
-  const harvestAgg = db
+  const freshAgg = db
     .select({
-      productId: harvestLogs.productId,
-      source: harvestLogs.source,
-      total: sql<number>`coalesce(sum(${harvestLogs.quantityTrays}), 0)`,
+      productId: inventoryScans.productId,
+      total: sql<number>`count(*)`,
     })
-    .from(harvestLogs)
-    .groupBy(harvestLogs.productId, harvestLogs.source)
+    .from(inventoryScans)
+    .where(sql`substr(${inventoryScans.scannedAt}, 1, 10) = ${today}`)
+    .groupBy(inventoryScans.productId)
     .all();
 
-  const committedAgg = db
+  const coolerAgg = db
+    .select({
+      productId: inventoryScans.productId,
+      total: sql<number>`count(*)`,
+    })
+    .from(inventoryScans)
+    .where(
+      and(
+        isNull(inventoryScans.checkoutAt),
+        lt(sql`substr(${inventoryScans.scannedAt}, 1, 10)`, today),
+      ),
+    )
+    .groupBy(inventoryScans.productId)
+    .all();
+
+  const committedRows = db
     .select({
       productId: orderItems.productId,
+      requestedDelivery: salesOrders.requestedDelivery,
       total: sql<number>`coalesce(sum(${orderItems.quantityOrdered}), 0)`,
     })
     .from(orderItems)
     .innerJoin(salesOrders, eq(salesOrders.id, orderItems.orderId))
-    .where(eq(salesOrders.status, "entered"))
-    .groupBy(orderItems.productId)
+    .where(
+      and(
+        or(
+          eq(salesOrders.requestedDelivery, today),
+          eq(salesOrders.requestedDelivery, tomorrow),
+        ),
+        sql`${salesOrders.status} != 'delivered'`,
+      ),
+    )
+    .groupBy(orderItems.productId, salesOrders.requestedDelivery)
     .all();
 
   return allProducts.map((product) => {
-    const freshTrays =
-      harvestAgg.find((h) => h.productId === product.id && h.source === "fresh")?.total ?? 0;
-    const coolerTrays =
-      harvestAgg.find((h) => h.productId === product.id && h.source === "cooler")?.total ?? 0;
-    const totalAvailable = freshTrays + coolerTrays;
-    const totalCommitted =
-      committedAgg.find((c) => c.productId === product.id)?.total ?? 0;
+    const freshCases = freshAgg.find((r) => r.productId === product.id)?.total ?? 0;
+    const coolerCases = coolerAgg.find((r) => r.productId === product.id)?.total ?? 0;
+    const totalAvailable = freshCases + coolerCases;
+    const committedToday =
+      committedRows.find(
+        (r) => r.productId === product.id && r.requestedDelivery === today,
+      )?.total ?? 0;
+    const committedTomorrow =
+      committedRows.find(
+        (r) => r.productId === product.id && r.requestedDelivery === tomorrow,
+      )?.total ?? 0;
 
     return {
       product,
-      freshTrays,
-      coolerTrays,
+      freshCases,
+      coolerCases,
       totalAvailable,
-      totalCommitted,
-      gap: totalAvailable - totalCommitted,
+      committedToday,
+      committedTomorrow,
+      gap: totalAvailable - committedToday,
     };
   });
 }

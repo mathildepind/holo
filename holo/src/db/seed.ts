@@ -3,7 +3,7 @@ import {
   billsOfLading,
   carriers,
   customers,
-  harvestLogs,
+  inventoryScans,
   orderItems,
   packItems,
   packRecords,
@@ -12,6 +12,11 @@ import {
   shipments,
 } from "./schema";
 
+// Seed fixture anchored to the morning of 2025-03-10 (DEMO_TODAY).
+// Mirrors the case-study sample CSVs: orders 1001-1003 are delivered with
+// full traceability (pack record → scans → BOL); 1004 ships today and
+// awaits packing (scans 823-831 are today's harvest, not yet assigned to a
+// pack item); 1005 is open for tomorrow's harvest.
 export function seedDb(db: DB) {
   db.insert(customers)
     .values([
@@ -23,55 +28,45 @@ export function seedDb(db: DB) {
 
   db.insert(products)
     .values([
-      { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, scanPrefix: "og-9024" },
-      { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, scanPrefix: "og-7201" },
-      { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, scanPrefix: "og-7310" },
-      { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, scanPrefix: "og-8841" },
-      { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, scanPrefix: "og-9531" },
-      { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, scanPrefix: "og-8650" },
-      { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, scanPrefix: "og-9140" },
+      { id: 1, sku: "SM-645", name: "Spring Mix", packSize: "6 × 4.5 oz", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
+      { id: 2, sku: "BR-500", name: "Baby Romaine", packSize: "6 × 5 oz", unitPrice: 24.0, caseWeightLb: 2.75, scanPrefix: "cv-1912" },
+      { id: 3, sku: "CL-410", name: "Crispy Leaf", packSize: "6 × 4.5 oz", unitPrice: 22.5, caseWeightLb: 2.5, scanPrefix: "cv-1905" },
+      { id: 4, sku: "OA-100", name: "Organic Arugula", packSize: "6 × 4.5 oz", unitPrice: 21.0, caseWeightLb: 2.5, scanPrefix: "og-1974" },
+      { id: 5, sku: "BK-200", name: "Organic Baby Kale", packSize: "6 × 4.5 oz", unitPrice: 19.75, caseWeightLb: 2.5, scanPrefix: "og-1981" },
+      { id: 6, sku: "OS-300", name: "Organic Spinach", packSize: "6 × 4.5 oz", unitPrice: 20.0, caseWeightLb: 2.5, scanPrefix: "og-1936" },
+      { id: 7, sku: "TG-150", name: "Tender Greens", packSize: "6 × 4.5 oz", unitPrice: 19.0, caseWeightLb: 2.5, scanPrefix: "cv-1943" },
     ])
     .run();
 
   db.insert(salesOrders)
     .values([
-      { id: 101, customerId: 1, poNumber: "BL-20250415", requestedDelivery: "2025-04-16", plannedShip: "2025-04-15", status: "entered", enteredAt: "2025-04-14T17:30:00Z" },
-      { id: 102, customerId: 2, poNumber: "CH-20250415", requestedDelivery: "2025-04-16", plannedShip: "2025-04-15", status: "entered", enteredAt: "2025-04-14T18:10:00Z" },
-      { id: 103, customerId: 3, poNumber: "GG-20250415", requestedDelivery: "2025-04-17", plannedShip: "2025-04-16", status: "entered", enteredAt: "2025-04-14T19:00:00Z" },
-      { id: 104, customerId: 1, poNumber: "BL-20250412", requestedDelivery: "2025-04-13", plannedShip: "2025-04-12", status: "delivered", enteredAt: "2025-04-11T16:00:00Z" },
-      { id: 105, customerId: 2, poNumber: "CH-20250410", requestedDelivery: "2025-04-11", plannedShip: "2025-04-10", status: "delivered", enteredAt: "2025-04-09T14:00:00Z" },
+      { id: 1001, customerId: 1, poNumber: "BLM-250303", requestedDelivery: "2025-03-03", plannedShip: "2025-03-03", status: "delivered", enteredAt: "2025-02-28T18:00:00Z" },
+      { id: 1002, customerId: 2, poNumber: "CHC-250304", requestedDelivery: "2025-03-04", plannedShip: "2025-03-04", status: "delivered", enteredAt: "2025-03-01T20:00:00Z" },
+      { id: 1003, customerId: 3, poNumber: "GGP-250306", requestedDelivery: "2025-03-06", plannedShip: "2025-03-06", status: "delivered", enteredAt: "2025-03-03T16:00:00Z" },
+      { id: 1004, customerId: 1, poNumber: "BLM-250310", requestedDelivery: "2025-03-10", plannedShip: "2025-03-10", status: "entered", enteredAt: "2025-03-07T17:30:00Z" },
+      { id: 1005, customerId: 2, poNumber: "CHC-250311", requestedDelivery: "2025-03-11", plannedShip: "2025-03-11", status: "entered", enteredAt: "2025-03-08T19:00:00Z" },
     ])
     .run();
 
   db.insert(orderItems)
     .values([
-      { id: 1001, orderId: 101, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
-      { id: 1002, orderId: 101, productId: 2, quantityOrdered: 24, unitPrice: 24.0, discount: 0 },
-      { id: 1003, orderId: 101, productId: 4, quantityOrdered: 12, unitPrice: 21.0, discount: 0 },
-      { id: 1004, orderId: 102, productId: 1, quantityOrdered: 36, unitPrice: 18.5, discount: 5 },
-      { id: 1005, orderId: 102, productId: 3, quantityOrdered: 24, unitPrice: 22.5, discount: 0 },
-      { id: 1006, orderId: 102, productId: 5, quantityOrdered: 18, unitPrice: 19.75, discount: 0 },
-      { id: 1007, orderId: 103, productId: 2, quantityOrdered: 50, unitPrice: 24.0, discount: 10 },
-      { id: 1008, orderId: 103, productId: 1, quantityOrdered: 30, unitPrice: 18.5, discount: 0 },
-      { id: 1009, orderId: 104, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
-      { id: 1010, orderId: 104, productId: 2, quantityOrdered: 24, unitPrice: 24.0, discount: 0 },
-      { id: 1011, orderId: 105, productId: 3, quantityOrdered: 30, unitPrice: 22.5, discount: 0 },
-      { id: 1012, orderId: 105, productId: 5, quantityOrdered: 24, unitPrice: 19.75, discount: 0 },
-    ])
-    .run();
-
-  db.insert(harvestLogs)
-    .values([
-      { id: 1, productId: 1, harvestDate: "2025-04-15", quantityTrays: 60, source: "fresh" },
-      { id: 2, productId: 2, harvestDate: "2025-04-15", quantityTrays: 30, source: "fresh" },
-      { id: 3, productId: 3, harvestDate: "2025-04-15", quantityTrays: 40, source: "fresh" },
-      { id: 4, productId: 4, harvestDate: "2025-04-15", quantityTrays: 15, source: "fresh" },
-      { id: 5, productId: 5, harvestDate: "2025-04-15", quantityTrays: 20, source: "fresh" },
-      { id: 6, productId: 1, harvestDate: "2025-04-14", quantityTrays: 12, source: "cooler" },
-      { id: 7, productId: 2, harvestDate: "2025-04-14", quantityTrays: 8, source: "cooler" },
-      { id: 8, productId: 4, harvestDate: "2025-04-14", quantityTrays: 6, source: "cooler" },
-      { id: 9, productId: 6, harvestDate: "2025-04-15", quantityTrays: 25, source: "fresh" },
-      { id: 10, productId: 7, harvestDate: "2025-04-15", quantityTrays: 18, source: "fresh" },
+      // Order 1001 — Bay Leaf (delivered 2025-03-03)
+      { id: 5001, orderId: 1001, productId: 1, quantityOrdered: 4, unitPrice: 13, discount: 0 },
+      { id: 5002, orderId: 1001, productId: 2, quantityOrdered: 3, unitPrice: 14, discount: 0 },
+      { id: 5003, orderId: 1001, productId: 7, quantityOrdered: 2, unitPrice: 13, discount: 0 },
+      // Order 1002 — Coastal Harvest Co-op (delivered 2025-03-04)
+      { id: 5004, orderId: 1002, productId: 4, quantityOrdered: 3, unitPrice: 15, discount: 0 },
+      { id: 5005, orderId: 1002, productId: 5, quantityOrdered: 2, unitPrice: 15, discount: 0 },
+      // Order 1003 — Golden Gate Provisions (delivered 2025-03-06)
+      { id: 5006, orderId: 1003, productId: 1, quantityOrdered: 6, unitPrice: 13, discount: 0 },
+      { id: 5007, orderId: 1003, productId: 2, quantityOrdered: 3, unitPrice: 14, discount: 0 },
+      // Order 1004 — Bay Leaf (ships today)
+      { id: 5008, orderId: 1004, productId: 1, quantityOrdered: 4, unitPrice: 13, discount: 0 },
+      { id: 5009, orderId: 1004, productId: 3, quantityOrdered: 3, unitPrice: 13, discount: 0 },
+      { id: 5010, orderId: 1004, productId: 7, quantityOrdered: 2, unitPrice: 13, discount: 0 },
+      // Order 1005 — Coastal Harvest Co-op (ships tomorrow)
+      { id: 5011, orderId: 1005, productId: 4, quantityOrdered: 4, unitPrice: 15, discount: 0 },
+      { id: 5012, orderId: 1005, productId: 6, quantityOrdered: 3, unitPrice: 15, discount: 0 },
     ])
     .run();
 
@@ -84,31 +79,83 @@ export function seedDb(db: DB) {
 
   db.insert(shipments)
     .values([
-      { id: 1, carrierId: 1, shipDate: "2025-04-12", status: "delivered", departedAt: "2025-04-12T06:00:00Z", deliveredAt: "2025-04-13T09:30:00Z" },
-      { id: 2, carrierId: 2, shipDate: "2025-04-10", status: "delivered", departedAt: "2025-04-10T07:00:00Z", deliveredAt: "2025-04-11T10:00:00Z" },
+      { id: 1, carrierId: 1, shipDate: "2025-03-03", status: "delivered", departedAt: "2025-03-03T08:30:00Z", deliveredAt: "2025-03-03T11:15:00Z" },
+      { id: 2, carrierId: 1, shipDate: "2025-03-04", status: "delivered", departedAt: "2025-03-04T09:00:00Z", deliveredAt: "2025-03-04T13:45:00Z" },
+      { id: 3, carrierId: 1, shipDate: "2025-03-06", status: "delivered", departedAt: "2025-03-06T07:45:00Z", deliveredAt: "2025-03-06T10:30:00Z" },
     ])
     .run();
 
   db.insert(packRecords)
     .values([
-      { id: 1, orderId: 104, status: "locked", packedBy: "L. Greens", notes: "Clean pack. Baby Romaine quality excellent.", verifiedAt: "2025-04-12T04:45:00Z" },
-      { id: 2, orderId: 105, status: "locked", packedBy: "L. Greens", notes: "Short 6 cases of Green Leaf — quality pull on outer leaves. Customer notified.", verifiedAt: "2025-04-10T05:15:00Z" },
+      { id: 1, orderId: 1001, status: "locked", packedBy: "L. Greens", notes: "Clean pack.", verifiedAt: "2025-03-03T03:45:00Z" },
+      { id: 2, orderId: 1002, status: "locked", packedBy: "L. Greens", notes: "Clean pack — arugula and baby kale in great shape.", verifiedAt: "2025-03-04T04:10:00Z" },
+      { id: 3, orderId: 1003, status: "locked", packedBy: "L. Greens", notes: "Clean pack.", verifiedAt: "2025-03-06T02:55:00Z" },
     ])
     .run();
 
   db.insert(packItems)
     .values([
-      { id: 1, packRecordId: 1, productId: 1, quantityPacked: 48, discrepancyNote: null },
-      { id: 2, packRecordId: 1, productId: 2, quantityPacked: 24, discrepancyNote: null },
-      { id: 3, packRecordId: 2, productId: 3, quantityPacked: 24, discrepancyNote: "Short 6 cases — quality pull on outer leaves. Customer approved." },
-      { id: 4, packRecordId: 2, productId: 5, quantityPacked: 24, discrepancyNote: null },
+      { id: 1, packRecordId: 1, productId: 1, quantityPacked: 4, discrepancyNote: null },
+      { id: 2, packRecordId: 1, productId: 2, quantityPacked: 3, discrepancyNote: null },
+      { id: 3, packRecordId: 1, productId: 7, quantityPacked: 2, discrepancyNote: null },
+      { id: 4, packRecordId: 2, productId: 4, quantityPacked: 3, discrepancyNote: null },
+      { id: 5, packRecordId: 2, productId: 5, quantityPacked: 2, discrepancyNote: null },
+      { id: 6, packRecordId: 3, productId: 1, quantityPacked: 6, discrepancyNote: null },
+      { id: 7, packRecordId: 3, productId: 2, quantityPacked: 3, discrepancyNote: null },
     ])
     .run();
 
   db.insert(billsOfLading)
     .values([
-      { id: 1, bolNumber: "BOL-2025-0041", packRecordId: 1, shipmentId: 1, palletCount: 4, totalWeight: 1240, tempRequirements: "34–38°F", generatedBy: "Roman E.", generatedAt: "2025-04-12T05:10:00Z" },
-      { id: 2, bolNumber: "BOL-2025-0040", packRecordId: 2, shipmentId: 2, palletCount: 3, totalWeight: 980, tempRequirements: "34–38°F", generatedBy: "Roman E.", generatedAt: "2025-04-10T05:45:00Z" },
+      // Weights: 1001 = 4×2.5 + 3×2.75 + 2×2.5 = 23.25 → 23, 1002 = 3×2.5 + 2×2.5 = 12.5 → 13,
+      // 1003 = 6×2.5 + 3×2.75 = 23.25 → 23. New packs continue from 0043.
+      { id: 1, bolNumber: "BOL-2025-0040", packRecordId: 1, shipmentId: 1, palletCount: 1, totalWeight: 23, tempRequirements: "34-38\u00B0F", generatedBy: "Roman E.", generatedAt: "2025-03-03T04:00:00Z" },
+      { id: 2, bolNumber: "BOL-2025-0041", packRecordId: 2, shipmentId: 2, palletCount: 1, totalWeight: 13, tempRequirements: "34-38\u00B0F", generatedBy: "Roman E.", generatedAt: "2025-03-04T04:30:00Z" },
+      { id: 3, bolNumber: "BOL-2025-0042", packRecordId: 3, shipmentId: 3, palletCount: 1, totalWeight: 23, tempRequirements: "34-38\u00B0F", generatedBy: "Roman E.", generatedAt: "2025-03-06T03:15:00Z" },
+    ])
+    .run();
+
+  // Inventory scans: one per case. Historical scans (801-822) are linked to
+  // pack_items for orders 1001-1003 and checked out when the pallets departed.
+  // Today's harvest (823-831) is staged for order 1004's pack run — scanned
+  // off the line this morning, but not yet assigned to a pack_item.
+  db.insert(inventoryScans)
+    .values([
+      // Order 1001 — harvested + checked out 2025-03-03
+      { id: 801, scanCode: "og-9024-25A09-0001", productId: 1, batchCode: "25A09", packItemId: 1, scannedAt: "2025-03-03T03:46:00Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 802, scanCode: "og-9024-25A09-0002", productId: 1, batchCode: "25A09", packItemId: 1, scannedAt: "2025-03-03T03:46:30Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 803, scanCode: "og-9024-25A09-0003", productId: 1, batchCode: "25A09", packItemId: 1, scannedAt: "2025-03-03T03:47:00Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 804, scanCode: "og-9024-25A09-0004", productId: 1, batchCode: "25A09", packItemId: 1, scannedAt: "2025-03-03T03:47:30Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 805, scanCode: "cv-1912-25A09-0001", productId: 2, batchCode: "25A09", packItemId: 2, scannedAt: "2025-03-03T03:50:00Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 806, scanCode: "cv-1912-25A09-0002", productId: 2, batchCode: "25A09", packItemId: 2, scannedAt: "2025-03-03T03:50:30Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 807, scanCode: "cv-1912-25A09-0003", productId: 2, batchCode: "25A09", packItemId: 2, scannedAt: "2025-03-03T03:51:00Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 808, scanCode: "cv-1943-25A09-0001", productId: 7, batchCode: "25A09", packItemId: 3, scannedAt: "2025-03-03T03:53:00Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 809, scanCode: "cv-1943-25A09-0002", productId: 7, batchCode: "25A09", packItemId: 3, scannedAt: "2025-03-03T03:53:30Z", checkoutAt: "2025-03-03T09:05:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      // Order 1002 — harvested + checked out 2025-03-04
+      { id: 810, scanCode: "og-1974-25A09-0001", productId: 4, batchCode: "25A09", packItemId: 4, scannedAt: "2025-03-04T04:11:00Z", checkoutAt: "2025-03-04T09:30:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 811, scanCode: "og-1974-25A09-0002", productId: 4, batchCode: "25A09", packItemId: 4, scannedAt: "2025-03-04T04:11:30Z", checkoutAt: "2025-03-04T09:30:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 812, scanCode: "og-1974-25A09-0003", productId: 4, batchCode: "25A09", packItemId: 4, scannedAt: "2025-03-04T04:12:00Z", checkoutAt: "2025-03-04T09:30:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 813, scanCode: "og-1981-25A09-0001", productId: 5, batchCode: "25A09", packItemId: 5, scannedAt: "2025-03-04T04:14:00Z", checkoutAt: "2025-03-04T09:30:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 814, scanCode: "og-1981-25A09-0002", productId: 5, batchCode: "25A09", packItemId: 5, scannedAt: "2025-03-04T04:14:30Z", checkoutAt: "2025-03-04T09:30:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      // Order 1003 — harvested + checked out 2025-03-06
+      { id: 815, scanCode: "og-9024-25A09-0005", productId: 1, batchCode: "25A09", packItemId: 6, scannedAt: "2025-03-06T02:56:00Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 816, scanCode: "og-9024-25A09-0006", productId: 1, batchCode: "25A09", packItemId: 6, scannedAt: "2025-03-06T02:56:30Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 817, scanCode: "og-9024-25A09-0007", productId: 1, batchCode: "25A09", packItemId: 6, scannedAt: "2025-03-06T02:57:00Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 818, scanCode: "og-9024-25A09-0008", productId: 1, batchCode: "25A09", packItemId: 6, scannedAt: "2025-03-06T02:57:30Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 819, scanCode: "og-9024-25A09-0009", productId: 1, batchCode: "25A09", packItemId: 6, scannedAt: "2025-03-06T02:58:00Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 820, scanCode: "cv-1912-25A09-0004", productId: 2, batchCode: "25A09", packItemId: 7, scannedAt: "2025-03-06T03:00:00Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 821, scanCode: "cv-1912-25A09-0005", productId: 2, batchCode: "25A09", packItemId: 7, scannedAt: "2025-03-06T03:00:30Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 822, scanCode: "cv-1912-25A09-0006", productId: 2, batchCode: "25A09", packItemId: 7, scannedAt: "2025-03-06T03:01:00Z", checkoutAt: "2025-03-06T08:15:00Z", isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      // Today's harvest — ready for order 1004, not yet assigned to a pack_item.
+      { id: 823, scanCode: "og-9024-25B09-0001", productId: 1, batchCode: "25B09", packItemId: null, scannedAt: "2025-03-10T03:21:00Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 824, scanCode: "og-9024-25B09-0002", productId: 1, batchCode: "25B09", packItemId: null, scannedAt: "2025-03-10T03:21:30Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 825, scanCode: "og-9024-25B09-0003", productId: 1, batchCode: "25B09", packItemId: null, scannedAt: "2025-03-10T03:22:00Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 826, scanCode: "og-9024-25B09-0004", productId: 1, batchCode: "25B09", packItemId: null, scannedAt: "2025-03-10T03:22:30Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 827, scanCode: "cv-1905-25A09-0001", productId: 3, batchCode: "25A09", packItemId: null, scannedAt: "2025-03-10T03:24:00Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 828, scanCode: "cv-1905-25A09-0002", productId: 3, batchCode: "25A09", packItemId: null, scannedAt: "2025-03-10T03:24:30Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 829, scanCode: "cv-1905-25A09-0003", productId: 3, batchCode: "25A09", packItemId: null, scannedAt: "2025-03-10T03:25:00Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 830, scanCode: "cv-1943-25A09-0003", productId: 7, batchCode: "25A09", packItemId: null, scannedAt: "2025-03-10T03:27:00Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
+      { id: 831, scanCode: "cv-1943-25A09-0004", productId: 7, batchCode: "25A09", packItemId: null, scannedAt: "2025-03-10T03:27:30Z", checkoutAt: null, isProduction: true, isDonation: false, isCheckoutOverridden: false, isAddedInFulfillment: false },
     ])
     .run();
 }

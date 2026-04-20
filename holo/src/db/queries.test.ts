@@ -5,13 +5,14 @@ import {
   products,
   salesOrders,
   orderItems,
-  harvestLogs,
+  inventoryScans,
   packRecords,
   packItems,
   carriers,
   shipments,
   billsOfLading,
 } from "./schema";
+import { DEMO_TODAY, addDaysISO } from "@/lib/demo-config";
 import {
   getCustomerById,
   getProductById,
@@ -59,6 +60,7 @@ describe("getProductById / getProductBySku", () => {
         name: "Spring Mix",
         packSize: "6 x 4.5 oz",
         unitPrice: 18.5,
+        caseWeightLb: 2.5,
         scanPrefix: "og-9024",
       })
       .run();
@@ -74,6 +76,7 @@ describe("getProductById / getProductBySku", () => {
       name: "Spring Mix",
       packSize: "6 x 4.5 oz",
       unitPrice: 18.5,
+      caseWeightLb: 2.5,
       scanPrefix: "og-9024",
     });
   });
@@ -115,6 +118,7 @@ describe("getEnrichedOrder", () => {
           name: "Spring Mix",
           packSize: "6 x 4.5 oz",
           unitPrice: 18.5,
+          caseWeightLb: 2.5,
           scanPrefix: "og-9024",
         },
         {
@@ -122,6 +126,7 @@ describe("getEnrichedOrder", () => {
           name: "Baby Arugula",
           packSize: "6 x 4.5 oz",
           unitPrice: 19.0,
+          caseWeightLb: 2.5,
           scanPrefix: "og-9031",
         },
       ])
@@ -187,39 +192,28 @@ describe("getEnrichedOrder", () => {
 });
 
 describe("getAllEnrichedOrders / getOpenOrders", () => {
+  const today = DEMO_TODAY;
+  const tomorrow = addDaysISO(today, 1);
+  const dayAfter = addDaysISO(today, 2);
+  const yesterday = addDaysISO(today, -1);
+
   function seedMixedOrders(db: ReturnType<typeof createTestDb>) {
     db.insert(customers)
       .values({ name: "Bay Leaf Markets", location: "Palo Alto", address: "—" })
       .run();
     db.insert(products)
-      .values({ sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" })
+      .values({ sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" })
       .run();
     db.insert(salesOrders)
       .values([
-        {
-          customerId: 1,
-          poNumber: "BL-OPEN-1",
-          requestedDelivery: "2026-04-20",
-          plannedShip: "2026-04-19",
-          status: "entered",
-          enteredAt: "2026-04-15T08:00:00Z",
-        },
-        {
-          customerId: 1,
-          poNumber: "BL-PAST-1",
-          requestedDelivery: "2026-04-10",
-          plannedShip: "2026-04-09",
-          status: "delivered",
-          enteredAt: "2026-04-05T08:00:00Z",
-        },
-        {
-          customerId: 1,
-          poNumber: "BL-OPEN-2",
-          requestedDelivery: "2026-04-21",
-          plannedShip: "2026-04-20",
-          status: "entered",
-          enteredAt: "2026-04-16T08:00:00Z",
-        },
+        // Delivering today, not delivered → open
+        { customerId: 1, poNumber: "BL-OPEN-TODAY", requestedDelivery: today, plannedShip: today, status: "entered", enteredAt: `${yesterday}T08:00:00Z` },
+        // Delivered already → not open
+        { customerId: 1, poNumber: "BL-PAST", requestedDelivery: yesterday, plannedShip: yesterday, status: "delivered", enteredAt: `${yesterday}T06:00:00Z` },
+        // Delivering tomorrow, not delivered → open
+        { customerId: 1, poNumber: "BL-OPEN-TMRW", requestedDelivery: tomorrow, plannedShip: tomorrow, status: "entered", enteredAt: `${today}T08:00:00Z` },
+        // Too far out → not open
+        { customerId: 1, poNumber: "BL-FUTURE", requestedDelivery: dayAfter, plannedShip: dayAfter, status: "entered", enteredAt: `${today}T09:00:00Z` },
       ])
       .run();
     db.insert(orderItems)
@@ -227,6 +221,7 @@ describe("getAllEnrichedOrders / getOpenOrders", () => {
         { orderId: 1, productId: 1, quantityOrdered: 10, unitPrice: 18.5, discount: 0 },
         { orderId: 2, productId: 1, quantityOrdered: 20, unitPrice: 18.5, discount: 0 },
         { orderId: 3, productId: 1, quantityOrdered: 15, unitPrice: 18.5, discount: 0 },
+        { orderId: 4, productId: 1, quantityOrdered: 5, unitPrice: 18.5, discount: 0 },
       ])
       .run();
   }
@@ -236,17 +231,17 @@ describe("getAllEnrichedOrders / getOpenOrders", () => {
     seedMixedOrders(db);
 
     const rows = getAllEnrichedOrders(db);
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.every((o) => o.customer.name === "Bay Leaf Markets")).toBe(true);
     expect(rows.every((o) => o.items.length === 1 && o.items[0].product.sku === "SM-645")).toBe(true);
   });
 
-  it("getOpenOrders returns only orders with status = entered", () => {
+  it("getOpenOrders returns non-delivered orders shipping today or tomorrow", () => {
     const db = createTestDb();
     seedMixedOrders(db);
 
     const open = getOpenOrders(db);
-    expect(open.map((o) => o.poNumber)).toEqual(["BL-OPEN-1", "BL-OPEN-2"]);
+    expect(open.map((o) => o.poNumber).sort()).toEqual(["BL-OPEN-TMRW", "BL-OPEN-TODAY"]);
   });
 
   it("both helpers return [] when no orders exist", () => {
@@ -257,108 +252,124 @@ describe("getAllEnrichedOrders / getOpenOrders", () => {
 });
 
 describe("getInventoryAvailability", () => {
-  function seedInventory(db: ReturnType<typeof createTestDb>) {
+  const today = DEMO_TODAY;
+  const tomorrow = addDaysISO(today, 1);
+  const yesterday = addDaysISO(today, -1);
+  const lastWeek = addDaysISO(today, -7);
+
+  function baseSeed(db: ReturnType<typeof createTestDb>) {
     db.insert(customers)
       .values({ name: "Bay Leaf Markets", location: "Palo Alto", address: "—" })
       .run();
     db.insert(products)
       .values([
-        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" },
-        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, scanPrefix: "og-7201" },
-        { sku: "OA-100", name: "Organic Arugula", packSize: "6x4.5", unitPrice: 21, scanPrefix: "og-8841" },
-      ])
-      .run();
-    // Open order — should count toward committed
-    db.insert(salesOrders)
-      .values({
-        customerId: 1,
-        poNumber: "BL-OPEN",
-        requestedDelivery: "2026-04-20",
-        plannedShip: "2026-04-19",
-        status: "entered",
-        enteredAt: "2026-04-15T08:00:00Z",
-      })
-      .run();
-    // Delivered order — must NOT count toward committed
-    db.insert(salesOrders)
-      .values({
-        customerId: 1,
-        poNumber: "BL-PAST",
-        requestedDelivery: "2026-04-10",
-        plannedShip: "2026-04-09",
-        status: "delivered",
-        enteredAt: "2026-04-05T08:00:00Z",
-      })
-      .run();
-    db.insert(orderItems)
-      .values([
-        { orderId: 1, productId: 1, quantityOrdered: 48, unitPrice: 18.5, discount: 0 },
-        { orderId: 1, productId: 2, quantityOrdered: 24, unitPrice: 24, discount: 0 },
-        // Delivered order committed nothing to availability
-        { orderId: 2, productId: 1, quantityOrdered: 100, unitPrice: 18.5, discount: 0 },
-      ])
-      .run();
-    db.insert(harvestLogs)
-      .values([
-        // Spring Mix: 60 fresh + 12 cooler = 72 available, 48 committed → gap +24
-        { productId: 1, harvestDate: "2026-04-15", quantityTrays: 40, source: "fresh" },
-        { productId: 1, harvestDate: "2026-04-15", quantityTrays: 20, source: "fresh" },
-        { productId: 1, harvestDate: "2026-04-14", quantityTrays: 12, source: "cooler" },
-        // Baby Romaine: 10 fresh, 0 cooler, 24 committed → gap -14
-        { productId: 2, harvestDate: "2026-04-15", quantityTrays: 10, source: "fresh" },
-        // Organic Arugula: no harvest, no orders → all zeros
+        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
+        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, caseWeightLb: 2.75, scanPrefix: "og-7201" },
+        { sku: "OA-100", name: "Organic Arugula", packSize: "6x4.5", unitPrice: 21, caseWeightLb: 2.5, scanPrefix: "og-8841" },
       ])
       .run();
   }
 
-  it("returns one row per product with fresh/cooler split", () => {
+  function addScan(
+    db: ReturnType<typeof createTestDb>,
+    scanCode: string,
+    productId: number,
+    scannedAt: string,
+    checkoutAt: string | null,
+  ) {
+    db.insert(inventoryScans)
+      .values({
+        scanCode,
+        productId,
+        batchCode: "TEST",
+        packItemId: null,
+        scannedAt,
+        checkoutAt,
+        isProduction: true,
+        isDonation: false,
+        isCheckoutOverridden: false,
+        isAddedInFulfillment: false,
+      })
+      .run();
+  }
+
+  it("splits fresh (scanned today) from cooler (older + not checked out)", () => {
     const db = createTestDb();
-    seedInventory(db);
+    baseSeed(db);
 
-    const rows = getInventoryAvailability(db);
+    // Spring Mix: 3 scanned today (fresh), 2 scanned yesterday + no checkout (cooler),
+    // 1 scanned last week + checked out (consumed — ignored).
+    addScan(db, "SM-T-1", 1, `${today}T03:00:00Z`, null);
+    addScan(db, "SM-T-2", 1, `${today}T03:01:00Z`, null);
+    addScan(db, "SM-T-3", 1, `${today}T03:02:00Z`, null);
+    addScan(db, "SM-Y-1", 1, `${yesterday}T03:00:00Z`, null);
+    addScan(db, "SM-Y-2", 1, `${yesterday}T03:01:00Z`, null);
+    addScan(db, "SM-OLD", 1, `${lastWeek}T03:00:00Z`, `${lastWeek}T09:00:00Z`);
 
-    expect(rows).toHaveLength(3);
+    // Baby Romaine: 1 fresh today.
+    addScan(db, "BR-T-1", 2, `${today}T03:10:00Z`, null);
 
-    const springMix = rows.find((r) => r.product.sku === "SM-645")!;
+    const springMix = getInventoryAvailability(db).find((r) => r.product.sku === "SM-645")!;
     expect(springMix).toMatchObject({
-      freshTrays: 60,
-      coolerTrays: 12,
-      totalAvailable: 72,
-      totalCommitted: 48,
-      gap: 24,
+      freshCases: 3,
+      coolerCases: 2,
+      totalAvailable: 5,
     });
 
-    const babyRomaine = rows.find((r) => r.product.sku === "BR-500")!;
+    const babyRomaine = getInventoryAvailability(db).find((r) => r.product.sku === "BR-500")!;
     expect(babyRomaine).toMatchObject({
-      freshTrays: 10,
-      coolerTrays: 0,
-      totalAvailable: 10,
-      totalCommitted: 24,
-      gap: -14,
+      freshCases: 1,
+      coolerCases: 0,
+      totalAvailable: 1,
     });
   });
 
-  it("includes products with no harvest and no open orders", () => {
+  it("splits committed into today vs tomorrow and excludes delivered orders", () => {
     const db = createTestDb();
-    seedInventory(db);
+    baseSeed(db);
+
+    db.insert(salesOrders)
+      .values([
+        { customerId: 1, poNumber: "BL-TODAY", requestedDelivery: today, plannedShip: today, status: "entered", enteredAt: `${yesterday}T08:00:00Z` },
+        { customerId: 1, poNumber: "BL-TMRW", requestedDelivery: tomorrow, plannedShip: tomorrow, status: "entered", enteredAt: `${today}T08:00:00Z` },
+        { customerId: 1, poNumber: "BL-PAST", requestedDelivery: yesterday, plannedShip: yesterday, status: "delivered", enteredAt: `${lastWeek}T08:00:00Z` },
+      ])
+      .run();
+    db.insert(orderItems)
+      .values([
+        { orderId: 1, productId: 1, quantityOrdered: 10, unitPrice: 18.5, discount: 0 },
+        { orderId: 2, productId: 1, quantityOrdered: 4, unitPrice: 18.5, discount: 0 },
+        // Delivered — must not count anywhere
+        { orderId: 3, productId: 1, quantityOrdered: 100, unitPrice: 18.5, discount: 0 },
+      ])
+      .run();
+    // Seed enough today-harvest Spring Mix to cover today's commitment.
+    for (let i = 0; i < 12; i++) addScan(db, `SM-${i}`, 1, `${today}T03:${String(i).padStart(2, "0")}:00Z`, null);
+
+    const springMix = getInventoryAvailability(db).find((r) => r.product.sku === "SM-645")!;
+    expect(springMix).toMatchObject({
+      freshCases: 12,
+      coolerCases: 0,
+      totalAvailable: 12,
+      committedToday: 10,
+      committedTomorrow: 4,
+      gap: 2, // 12 - 10 today
+    });
+  });
+
+  it("returns zeros for a product with no scans and no orders", () => {
+    const db = createTestDb();
+    baseSeed(db);
 
     const arugula = getInventoryAvailability(db).find((r) => r.product.sku === "OA-100")!;
     expect(arugula).toMatchObject({
-      freshTrays: 0,
-      coolerTrays: 0,
+      freshCases: 0,
+      coolerCases: 0,
       totalAvailable: 0,
-      totalCommitted: 0,
+      committedToday: 0,
+      committedTomorrow: 0,
       gap: 0,
     });
-  });
-
-  it("only counts open orders toward committed quantities", () => {
-    const db = createTestDb();
-    seedInventory(db);
-
-    // Spring Mix has 100 committed on a delivered order — must not count
-    const springMix = getInventoryAvailability(db).find((r) => r.product.sku === "SM-645")!;
-    expect(springMix.totalCommitted).toBe(48);
   });
 });
 
@@ -369,8 +380,8 @@ describe("getEnrichedBOLs", () => {
       .run();
     db.insert(products)
       .values([
-        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" },
-        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, scanPrefix: "og-7201" },
+        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
+        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, caseWeightLb: 2.75, scanPrefix: "og-7201" },
       ])
       .run();
     db.insert(salesOrders)
@@ -511,8 +522,8 @@ describe("createPackAndBOL", () => {
       .run();
     db.insert(products)
       .values([
-        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, scanPrefix: "og-9024" },
-        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, scanPrefix: "og-7201" },
+        { sku: "SM-645", name: "Spring Mix", packSize: "6x4.5", unitPrice: 18.5, caseWeightLb: 2.5, scanPrefix: "og-9024" },
+        { sku: "BR-500", name: "Baby Romaine", packSize: "6x5", unitPrice: 24, caseWeightLb: 2.75, scanPrefix: "og-7201" },
       ])
       .run();
     db.insert(salesOrders)

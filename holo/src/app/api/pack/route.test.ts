@@ -12,11 +12,11 @@ describe("POST /api/pack", () => {
   it("locks a pack record, creates a BOL, and returns the BOL number", async () => {
     const res = await POST(
       postReq({
-        orderId: 101,
+        orderId: 1004,
         draftItems: [
-          { productId: 1, quantityPacked: 48, discrepancyNote: null },
-          { productId: 2, quantityPacked: 24, discrepancyNote: null },
-          { productId: 4, quantityPacked: 12, discrepancyNote: null },
+          { productId: 1, quantityPacked: 4, discrepancyNote: null },
+          { productId: 3, quantityPacked: 3, discrepancyNote: null },
+          { productId: 7, quantityPacked: 2, discrepancyNote: null },
         ],
         packNotes: "Clean pack.",
       })
@@ -39,7 +39,7 @@ describe("POST /api/pack", () => {
   });
 
   it("returns 400 when the body is missing required fields", async () => {
-    const res = await POST(postReq({ orderId: 101 }));
+    const res = await POST(postReq({ orderId: 1004 }));
     expect(res.status).toBe(400);
   });
 

@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1776548597213,
-      "tag": "0000_lying_venus",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1776548749347,
-      "tag": "0001_sparkling_dragon_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1776548857929,
-      "tag": "0002_uneven_jetstream",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1776549007209,
-      "tag": "0003_brainy_zemo",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1776549142722,
-      "tag": "0004_romantic_charles_xavier",
+      "when": 1776650538150,
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]

@@ -38,9 +38,10 @@ export type InventoryScan = {
   id: number;
   scanCode: string;
   productId: number;
+  batchCode: string;
+  packItemId: number | null;
   scannedAt: string;
   checkoutAt: string | null;
-  customerOrderId: number | null;
   isProduction: boolean;
   isDonation: boolean;
   isCheckoutOverridden: boolean;

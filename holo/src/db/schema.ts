@@ -14,6 +14,7 @@ export const products = sqliteTable("products", {
   name: text("name").notNull(),
   packSize: text("pack_size").notNull(),
   unitPrice: real("unit_price").notNull(),
+  caseWeightLb: real("case_weight_lb").notNull(),
   scanPrefix: text("scan_prefix").notNull(),
 });
 
@@ -44,16 +45,6 @@ export const orderItems = sqliteTable("order_items", {
   discount: real("discount").notNull(),
 });
 
-export const harvestLogs = sqliteTable("harvest_logs", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  productId: integer("product_id")
-    .notNull()
-    .references(() => products.id),
-  harvestDate: text("harvest_date").notNull(),
-  quantityTrays: integer("quantity_trays").notNull(),
-  source: text("source", { enum: ["fresh", "cooler"] }).notNull(),
-});
-
 export const packRecords = sqliteTable("pack_records", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   orderId: integer("order_id")
@@ -75,6 +66,22 @@ export const packItems = sqliteTable("pack_items", {
     .references(() => products.id),
   quantityPacked: integer("quantity_packed").notNull(),
   discrepancyNote: text("discrepancy_note"),
+});
+
+export const inventoryScans = sqliteTable("inventory_scans", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  scanCode: text("scan_code").notNull().unique(),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  batchCode: text("batch_code").notNull(),
+  packItemId: integer("pack_item_id").references(() => packItems.id),
+  scannedAt: text("scanned_at").notNull(),
+  checkoutAt: text("checkout_at"),
+  isProduction: integer("is_production", { mode: "boolean" }).notNull(),
+  isDonation: integer("is_donation", { mode: "boolean" }).notNull(),
+  isCheckoutOverridden: integer("is_checkout_overridden", { mode: "boolean" }).notNull(),
+  isAddedInFulfillment: integer("is_added_in_fulfillment", { mode: "boolean" }).notNull(),
 });
 
 export const carriers = sqliteTable("carriers", {
@@ -116,6 +123,7 @@ export const customersRelations = relations(customers, ({ many }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   orderItems: many(orderItems),
+  inventoryScans: many(inventoryScans),
 }));
 
 export const salesOrdersRelations = relations(salesOrders, ({ one, many }) => ({
@@ -149,7 +157,7 @@ export const packRecordsRelations = relations(packRecords, ({ one, many }) => ({
   }),
 }));
 
-export const packItemsRelations = relations(packItems, ({ one }) => ({
+export const packItemsRelations = relations(packItems, ({ one, many }) => ({
   packRecord: one(packRecords, {
     fields: [packItems.packRecordId],
     references: [packRecords.id],
@@ -157,6 +165,18 @@ export const packItemsRelations = relations(packItems, ({ one }) => ({
   product: one(products, {
     fields: [packItems.productId],
     references: [products.id],
+  }),
+  scans: many(inventoryScans),
+}));
+
+export const inventoryScansRelations = relations(inventoryScans, ({ one }) => ({
+  product: one(products, {
+    fields: [inventoryScans.productId],
+    references: [products.id],
+  }),
+  packItem: one(packItems, {
+    fields: [inventoryScans.packItemId],
+    references: [packItems.id],
   }),
 }));
 

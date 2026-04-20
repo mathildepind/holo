@@ -1,4 +1,4 @@
-# HOLO - Harvest and Order Logistics Operatios
+# HOLO - Harvest and Order Logistics Operations
 
 ## What is HOLO?
 

@@ -11,6 +11,31 @@ The core principle: **every entity that is currently a free-text field, a Google
 
 ---
 
+## v1 prototype scope
+
+This document describes the target data model. The v1 prototype (in `/holo`) implements a simplified subset — enough to demonstrate the three core flows against sample data without locking in decisions that are still stakeholder-gated. The simplifications below are intentional; each one maps to a deferred item or open question further down in this document.
+
+**Collapsed for v1:**
+- `CUSTOMERS` + `CUSTOMER_LOCATIONS` are merged into a single flat customer record (`name`, `location`, `address`). Stands in until Question 1 is confirmed. If a customer ever needs a second delivery location, the split is reinstated.
+
+**Added in v1 but not yet in the model:**
+- `PRODUCTS.sku` — a human-readable product code (e.g. `SM-645`) used in the UI and in API responses. Worth promoting to the model alongside `scan_prefix`.
+
+**Fields omitted from v1 (kept on the target model):**
+- `SALES_ORDERS.status` — v1 carries only `entered → fulfilled → released → delivered`. The `partially_fulfilled` and `cancelled` states are specified but not yet exercised by the prototype.
+- `SALES_ORDERS.delivery_location_id` — omitted, follows from the customer/location collapse above.
+- `INVENTORY_SCANS.pack_item_id` — v1 keeps the legacy `customer_order_id` link inherited from the source CSVs. Rewiring to `pack_item_id` is straightforward once the pack-verification writes land against a persistent store.
+- `INVENTORY_SCANS.batch_code` — not parsed in v1. Batch information is still present inside `scan_code`; promoting it to its own column is a schema migration, not a flow change.
+- `PACK_ITEMS.order_item_id` — v1 matches pack items to order items on `product_id` alone. Adequate for the sample data (no duplicate-product line items), but the model keeps the FK for the general case.
+- `PACK_ITEMS.substituted_for_order_item_id` — no substitution flow in v1.
+
+**Tables not yet implemented:**
+- `HARVEST_LOGS` — v1 derives the dashboard's today's-harvest count from `INVENTORY_SCANS.scanned_at` directly. This works while harvest-to-scan is 1:1 on the demo data. The tray-level log is retained in the model because Maria's use case ("how many trays came off overnight?") is grounded in trays, not scanned cases.
+
+None of these omissions change the shape of the three HOLO views. They defer decisions that are either stakeholder-gated or cheap to add once production volumes are real.
+
+---
+
 ## Entity Relationship Diagram
 
 ```mermaid

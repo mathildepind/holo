@@ -1,0 +1,25 @@
+customer_order_item_id,customer_order_id,sku_description,quantity,unit_price,discount,gross_line_value,net_line_value
+5001,1001,Spring Mix 6 x 4.5 oz,4,13,0,52,52
+5002,1001,Baby Romaine 6 x 5 oz,3,14,0,42,42
+5003,1001,Tender Greens 6 x 4.5 oz,2,13,0,26,26
+5004,1002,Organic Arugula 6 x 4.5 oz,3,15,0,45,45
+5005,1002,Organic Baby Kale 6 x 4.5 oz,2,15,0,30,30
+5006,1003,Spring Mix 6 x 4.5 oz,6,13,0,78,78
+5007,1003,Baby Romaine 6 x 5 oz,3,14,0,42,42
+5008,1004,Spring Mix 6 x 4.5 oz,4,13,0,52,52
+5009,1004,Crispy Leaf 6 x 4.5 oz,3,13,0,39,39
+5010,1004,Tender Greens 6 x 4.5 oz,2,13,0,26,26
+5011,1005,Organic Arugula 6 x 4.5 oz,4,15,0,60,60
+5012,1005,Organic Spinach 6 x 4.5 oz,3,15,0,45,45
+5013,1006,Spring Mix 6 x 4.5 oz,5,13,0,65,65
+5014,1006,Baby Romaine 6 x 5 oz,4,14,0,56,56
+5015,1006,Tender Greens 6 x 4.5 oz,3,13,0,39,39
+5016,1007,Spring Mix 6 x 4.5 oz,8,13,0,104,104
+5017,1007,Crispy Leaf 6 x 4.5 oz,4,13,0,52,52
+5018,1008,Organic Arugula 6 x 4.5 oz,3,15,0,45,45
+5019,1008,Organic Baby Kale 6 x 4.5 oz,3,15,0,45,45
+5020,1009,Spring Mix 6 x 4.5 oz,5,13,0,65,65
+5021,1009,Baby Romaine 6 x 5 oz,3,14,0,42,42
+5022,1009,Crispy Leaf 6 x 4.5 oz,3,13,0,39,39
+5023,1010,Spring Mix 6 x 4.5 oz,10,13,0,130,130
+5024,1010,Baby Romaine 6 x 5 oz,5,14,0,70,70

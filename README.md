@@ -2,7 +2,7 @@
 
 ## What is HOLO?
 
-HOLO is an operations UI concept for Hippo Harvest's pack-and-ship floor. It gives the user a single place to see today's harvest against committed orders, walk each order through a scan-based pack verification, and hand off a generated Bill of Lading to the carrier — replacing the spreadsheet + clipboard flow documented in [Current_Workflow.md](Current_Workflow.md).
+HOLO is an operations UI concept for Hippo Harvest's pack-and-ship floor. It gives the user a single place to see today's harvest against committed orders, walk each order through a scan-based pack verification, and hand off a generated Bill of Lading to the carrier — replacing the spreadsheet + clipboard flow documented in the [workflow gist](https://gist.github.com/fea0b04ea59a1ad50a56a343f6ed50fa).
 
 The prototype in [`holo/`](holo/) implements the three core views end-to-end:
 

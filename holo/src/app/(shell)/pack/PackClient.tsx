@@ -153,6 +153,9 @@ export default function PackClient() {
     setLockedBolId(bolId);
     setLockedAt(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
     setState("locked");
+    setOpenOrders((prev) =>
+      prev ? prev.filter((o) => o.id !== selectedOrder.id) : prev
+    );
   }
 
   async function handleDownloadBOL() {
@@ -163,9 +166,11 @@ export default function PackClient() {
     await generateBOLPDF(bol);
   }
 
-  function handleBack() {
+  async function handleBack() {
     setSelectedOrder(null);
     setState("editing");
+    const orders = await apiFetch<EnrichedOrder[]>("/api/orders");
+    setOpenOrders(orders.filter((o) => o.status === "entered"));
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────

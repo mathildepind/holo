@@ -10,7 +10,12 @@ The prototype in [`holo/`](holo/) implements the three core views end-to-end:
 - **Pack Verify** (`/pack`) — scan-driven pack verification for open orders; newly packed BOLs persist to `localStorage`
 - **Order History** (`/orders`) — past orders and the BOLs generated for them
 
-Data is a static in-memory fixture seeded from the case-study CSVs (`customer_orders.csv`, `customer_order_items.csv`, `inventory_scans.csv`) and anchored to a simulated "today" of **2025-03-10, 05:00**.
+Data is a static in-memory fixture seeded from the case-study CSVs (`customer_orders.csv`, `customer_order_items.csv`, `inventory_scans.csv`, in [`sample data/`](sample%20data/)) and anchored to a simulated "today" of **2025-03-10, 05:00**.
+
+## Deliverables
+
+- [`PRD/PRD_HOLO.pdf`](PRD/PRD_HOLO.pdf) — product requirements document ([Typst source](PRD/PRD_HOLO.typ))
+- [`PRD/HOLO_Data_Model.md`](PRD/HOLO_Data_Model.md) — target data model with a v1 prototype scope note
 
 ## Stack
 

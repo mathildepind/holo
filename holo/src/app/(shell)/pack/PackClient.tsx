@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import type { EnrichedOrder, Product } from "@/lib/types";
-import { Lock, AlertTriangle, CheckCircle, ChevronRight, ArrowLeft, FileText } from "lucide-react";
+import { generateBOLPDF } from "@/lib/bol-pdf";
+import type { EnrichedBOL, EnrichedOrder, Product } from "@/lib/types";
+import { Lock, AlertTriangle, CheckCircle, ChevronRight, ArrowLeft, Download } from "lucide-react";
 
 type DraftItem = {
   productId: number;
@@ -74,7 +74,6 @@ function OrderCard({
 type VerifyState = "editing" | "reviewing" | "locked";
 
 export default function PackClient() {
-  const router = useRouter();
   const [openOrders, setOpenOrders] = useState<EnrichedOrder[] | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<EnrichedOrder | null>(null);
 
@@ -87,6 +86,7 @@ export default function PackClient() {
   const [packNotes, setPackNotes] = useState("");
   const [state, setState] = useState<VerifyState>("editing");
   const [lockedAt, setLockedAt] = useState<string | null>(null);
+  const [lockedBolId, setLockedBolId] = useState<number | null>(null);
 
   function selectOrder(order: EnrichedOrder) {
     setSelectedOrder(order);
@@ -149,8 +149,18 @@ export default function PackClient() {
       }),
     });
     if (!res.ok) throw new Error(`POST /api/pack failed: ${res.status}`);
+    const { bolId } = (await res.json()) as { bolId: number };
+    setLockedBolId(bolId);
     setLockedAt(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
     setState("locked");
+  }
+
+  async function handleDownloadBOL() {
+    if (lockedBolId === null) return;
+    const bols = await apiFetch<EnrichedBOL[]>("/api/bols");
+    const bol = bols.find((b) => b.id === lockedBolId);
+    if (!bol) throw new Error(`BOL ${lockedBolId} not found`);
+    await generateBOLPDF(bol);
   }
 
   function handleBack() {
@@ -283,7 +293,7 @@ export default function PackClient() {
               Back to Orders
             </button>
             <button
-              onClick={() => router.push("/orders")}
+              onClick={handleDownloadBOL}
               style={{
                 padding: "8px 16px",
                 background: "var(--green)",
@@ -299,8 +309,8 @@ export default function PackClient() {
                 gap: 6,
               }}
             >
-              <FileText size={13} />
-              Generate BOL →
+              <Download size={13} />
+              Download BOL
             </button>
           </div>
         </div>

@@ -659,6 +659,21 @@ describe("createPackAndBOL", () => {
     expect(second.bolNumber).not.toBe(first.bolNumber);
   });
 
+  it("transitions the sales order status to 'fulfilled' so it leaves the open queue", () => {
+    const db = createTestDb();
+    seedOpenOrder(db);
+
+    createPackAndBOL(db, {
+      orderId: 1,
+      draftItems: [{ productId: 1, quantityPacked: 48, discrepancyNote: null }],
+      packNotes: "",
+      now: frozenNow,
+    });
+
+    const order = db.select().from(salesOrders).all()[0];
+    expect(order.status).toBe("fulfilled");
+  });
+
   it("rolls back every insert when the order id does not exist", () => {
     const db = createTestDb();
     seedOpenOrder(db);
@@ -677,5 +692,8 @@ describe("createPackAndBOL", () => {
     expect(db.select().from(shipments).all()).toHaveLength(0);
     expect(db.select().from(billsOfLading).all()).toHaveLength(0);
     expect(db.select().from(carriers).all()).toHaveLength(0);
+    // Status stays as originally seeded since the whole tx rolls back.
+    const order = db.select().from(salesOrders).all()[0];
+    expect(order.status).toBe("entered");
   });
 });

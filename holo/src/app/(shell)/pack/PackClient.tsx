@@ -79,7 +79,9 @@ export default function PackClient() {
   const [selectedOrder, setSelectedOrder] = useState<EnrichedOrder | null>(null);
 
   useEffect(() => {
-    apiFetch<EnrichedOrder[]>("/api/orders").then(setOpenOrders);
+    apiFetch<EnrichedOrder[]>("/api/orders").then((orders) =>
+      setOpenOrders(orders.filter((o) => o.status === "entered"))
+    );
   }, []);
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [packNotes, setPackNotes] = useState("");

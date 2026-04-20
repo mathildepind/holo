@@ -117,6 +117,11 @@ export function createPackAndBOL(db: DB, input: CreatePackInput) {
       )
       .run();
 
+    tx.update(salesOrders)
+      .set({ status: "fulfilled" })
+      .where(eq(salesOrders.id, input.orderId))
+      .run();
+
     let hippoTruck = tx
       .select()
       .from(carriers)

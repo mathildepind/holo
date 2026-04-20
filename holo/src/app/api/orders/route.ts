@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getOpenOrders } from "@/lib/mock-data";
+import { getDb } from "@/db/client";
+import { getOpenOrders } from "@/db/queries";
 
 export async function GET() {
-  return NextResponse.json(getOpenOrders());
+  return NextResponse.json(getOpenOrders(getDb()));
 }

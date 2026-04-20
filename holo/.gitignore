@@ -35,5 +35,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local sqlite artifacts
-*.db
+# sqlite
+/holo.db
+/holo.db-journal
+/holo.db-wal
+/holo.db-shm

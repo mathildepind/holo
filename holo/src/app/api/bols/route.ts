@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getEnrichedBOLs } from "@/lib/mock-data";
+import { getDb } from "@/db/client";
+import { getEnrichedBOLs } from "@/db/queries";
 
 export async function GET() {
-  return NextResponse.json(getEnrichedBOLs());
+  return NextResponse.json(getEnrichedBOLs(getDb()));
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GET } from "./route";
-import { DEMO_TODAY } from "@/lib/mock-data";
+import { DEMO_TODAY } from "@/lib/demo-config";
 
 function addDaysISO(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`);

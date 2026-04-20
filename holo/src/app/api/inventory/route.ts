@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getInventoryAvailability } from "@/lib/mock-data";
+import { getDb } from "@/db/client";
+import { getInventoryAvailability } from "@/db/queries";
 
 export async function GET() {
-  return NextResponse.json(getInventoryAvailability());
+  return NextResponse.json(getInventoryAvailability(getDb()));
 }
